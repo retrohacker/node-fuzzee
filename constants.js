@@ -23,6 +23,7 @@ var LEFT_PAREN_TKN             = "("
 var RIGHT_PAREN_TKN            = ")"
 var ASSIGN_TKN                 = ":="
 var COLON_TKN                  = ":"
+var COMMA_TKN                  = ","
 var SEMICOLON_TKN              = ";"
 
 /**
