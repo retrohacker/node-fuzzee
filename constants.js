@@ -35,6 +35,14 @@ var REAL_VAR_TKN               = "REAL"
  * Fuzzification Block Tokens
  */
 var TERM_TKN                   = "TERM"
+var TRIAN_TKN                  = "TRIAN"
+var TRAPE_TKN                  = "TRAPE"
+var GAUSS_TKN                  = "GAUSS"
+var GBELL_TKN                  = "GBELL"
+var SIGM_TKN                   = "SIGM"
+var SINGLETON_TKN              = "SINGLETON"
+var PIECEWISE_TKN              = "PIECEWISE"
+var FUNC_TKN                   = "FUNCTION"
 
 /**
  * Defuzzification Block Tokens
@@ -105,6 +113,14 @@ var TOKENS = {
   SEMICOLON_TKN: SEMICOLON_TKN,
   REAL_VAR_TKN: REAL_VAR_TKN,
   TERM_TKN: TERM_TKN,
+  TRIAN_TKN: TRIAN_TKN,    
+  TRAPE_TKN: TRAPE_TKN,    
+  GAUSS_TKN: GAUSS_TKN,    
+  GBELL_TKN: GBELL_TKN,    
+  SIGM_TKN: SIGM_TKN,     
+  SINGLETON_TKN: SINGLETON_TKN,
+  PIECEWISE_TKN: PIECEWISE_TKN,
+  FUNC_TKN: FUNC_TKN, 
   METHOD_TKN: METHOD_TKN,     
   COG_METHOD_TKN: COG_METHOD_TKN,
   COGS_METHOD_TKN: COGS_METHOD_TKN,
