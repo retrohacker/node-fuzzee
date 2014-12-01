@@ -1,4 +1,4 @@
-var c = require("./tokens").tokens
+var c = require("./tokens")
 var STRING_TYPE = "string",
     NUMBER_TYPE = "number",
     BOOL_TYPE = "boolean"

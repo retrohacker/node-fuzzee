@@ -154,4 +154,4 @@ var TOKENS = {
   IS_LOGIC_TKN: IS_LOGIC_TKN,           
   NOT_LOGIC_TKN: NOT_LOGIC_TKN
 }
-exports.tokens = TOKENS
+module.exports = TOKENS

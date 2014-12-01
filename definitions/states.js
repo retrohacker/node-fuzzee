@@ -9,4 +9,4 @@ var stateEnum = {
   RULE_BLOCK_STATE : 6,
   FIN_STATE: 7
 }
-exports.states = stateEnum;
+module.exports = stateEnum;
