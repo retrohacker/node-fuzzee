@@ -1,6 +1,6 @@
 var Transform = require('stream').Transform
 var util = require('util')
-var tokens = require('./constants.js')
+var tokens = require('./definitions/tokens.js')
 
 var fuzzee = module.exports = function constructor(fsl) {
   Transform.call(this)
@@ -16,12 +16,29 @@ fuzzee.prototype._transform = transform
 
 function transform(chunk,encoding,cb) {
   this.s += chunk
-  console.log(tokens)
-  console.log(this.s.replace(/[\n\f\r]+/,' $&').split(/[ \t\v]+/))
-  var symbols = this.s.replace(tokens.NEWLINE,' $&').split(/[ \t\v]+/)
+  var symbols = this.s.replace(tokens.terminators,' $& ').split(/[ \t\v]+/)
   this.s = symbols.pop()
-  //console.log(symbols)
-  //cb(null,chunk)
+  symbols = symbols.map(function(c,i,a) {
+    var curr = c;
+    var keys = Object.keys(tokens)
+    for(var i = 0; i < keys.length; i++) {
+      var v = keys[i]
+      var token = tokens[v]
+      if(typeof token === 'object') { //regex
+        if(c.match(token)) {
+          return v
+        }
+      } else { //string
+        if(token === c) {
+          return v
+        }
+      }
+    }
+    return {value:c}
+  })
+  //symbols is now an array of all the symbols we have thus far
+  console.log(symbols)
+  //cb(null,JSON.stringify(chunk))
 }
 
 fuzzee.prototype.set = function set(key,val) {

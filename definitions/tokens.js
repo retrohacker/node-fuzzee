@@ -93,14 +93,28 @@ var NOT_LOGIC_TKN              = "NOT"
 /**
  * Misc Tokens
  */
-var MULTILINE_COMMENT_START    = /\*\// // /*
-var MULTILINE_COMMENT_END      = /\*\// // */
-var NEWLINE                    = /[\f\n\r]+/
+var MULTILINE_COMMENT_START_TKN= /^\/\*+$/ // /*
+var MULTILINE_COMMENT_END_TKN  = /^\*+\/$/ // */
+var SINGLELINE_COMMENT_START_TKN   = "//"
+var NEWLINE_TKN                = /[\f\n\r]+/g
+
+var terminators = new RegExp("["+(([
+  LEFT_PAREN_TKN,
+  RIGHT_PAREN_TKN,
+  ASSIGN_TKN,
+  COLON_TKN,
+  COMMA_TKN,
+  SEMICOLON_TKN,
+].join(''))).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+  +"]"
+  + "|" +NEWLINE_TKN.source
+,'g')
 
 var TOKENS = {
-  MULTILINE_COMMENT_END: MULTILINE_COMMENT_START,
-  MULTILINE_COMMENT_END: MULTILINE_COMMENT_END,
-  NEWLINE: NEWLINE,
+  MULTILINE_COMMENT_START_TKN: MULTILINE_COMMENT_START_TKN,
+  MULTILINE_COMMENT_END_TKN: MULTILINE_COMMENT_END_TKN,
+  SINGLELINE_COMMENT_START_TKN: SINGLELINE_COMMENT_START_TKN,
+  NEWLINE_TKN: NEWLINE_TKN,
   FUNCTION_BLOCK_START_TKN: FUNCTION_BLOCK_START_TKN,
   FUNCTION_BLOCK_END_TOKEN: FUNCTION_BLOCK_END_TOKEN, 
   VAR_INPUT_BLOCK_START_TKN: VAR_INPUT_BLOCK_START_TKN, 
@@ -165,3 +179,4 @@ var TOKENS = {
   NOT_LOGIC_TKN: NOT_LOGIC_TKN
 }
 module.exports = TOKENS
+module.exports.terminators = terminators
