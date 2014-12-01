@@ -1,4 +1,4 @@
-var c = require("./constants").tokens
+var c = require("./tokens").tokens
 var STRING_TYPE = "string",
     NUMBER_TYPE = "number",
     BOOL_TYPE = "boolean"
@@ -392,6 +392,9 @@ exports.RuleBlock = function(d) {
   d = (typeof d === "undefined") ? {} : d
   var that = createObject(exports.RuleBlock.prototype)
   that.name = checkType(d, "name", STRING_TYPE, false)
+  that.operatorFunc = checkType(d, "operatorFunc", exports.OperatorFunc, false)
+  that.activationMethod = checkType(d, "activationMethod", exports.ActivationMethod, true)
+  that.accumulationMethod = checkType(d, "accumulationMethod", exports.AccumulationMethod, false)
   that.rules = checkArrayType(d, "rules", exports.Rule, false)
   return that
 }
