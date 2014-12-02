@@ -212,6 +212,10 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         if(this._tokens.length == 0) {
           return returnVal()
         }
+        else if(this._tokens.first() == t.FUZZIFY_BLOCK_END_TKN) {
+          this._mergeHeapArrayObject("fuzzifyBlocks")
+          this._currentState = states.FUNCTION_STATE
+        }
         else if(this._tokens.first() == t.TERM_TKN) {
           if(this._tokens.indexOf(t.SEMICOLON_TKN) == -1) {
             return returnVal()
@@ -379,7 +383,6 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         break
 
       case states.DEFUZZ_STATE:
-
         break
 
       case states.RULE_BLOCKSTATE:
