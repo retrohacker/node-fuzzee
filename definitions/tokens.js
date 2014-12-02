@@ -23,6 +23,7 @@ var ASSIGN_TKN                 = ":="
 var COLON_TKN                  = ":"
 var COMMA_TKN                  = ","
 var SEMICOLON_TKN              = ";"
+var RANGE_DOT_TKN              = ".."
 
 /**
  * Var Tokens
@@ -131,6 +132,7 @@ var TOKENS = {
   COLON_TKN: COLON_TKN,
   COMMA_TKN: COMMA_TKN,
   SEMICOLON_TKN: SEMICOLON_TKN,
+  RANGE_DOT_TKN: RANGE_DOT_TKN,
   REAL_VAR_TKN: REAL_VAR_TKN,
   TERM_TKN: TERM_TKN,
   TRIAN_TKN: TRIAN_TKN,
