@@ -5,6 +5,7 @@ var parser = module.exports = function constructor() {
   this._currentState = states.START_STATE
   this._objectHeap = []
   this._tokens = []
+  this._vars = []
   this._returnObjects = []
 }
 
@@ -73,20 +74,42 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
                   case 'FUZZIFY_BLOCK_START_TKN':
                     this._addHeapObject(new objects.FuzzifyBlock())
                     this._currentState = states.FUZZ_STATE
+
+                    varName = this._tokens.shift()
+                    if(typeof varName != 'object') {
+                      this._throwStateError('Fuzzify block declaration must be followed by name')
+                    }
+                    else {
+                      this._topHeapObject().set('var', this._getVar(varName.value))
+                    }
                     break
 
                   case 'DEFUZZIFY_BLOCK_START_TKN':
                     this._addHeapObject(new objects.DefuzzifyBlock())
                     this._currentState = states.DEFUZZ_STATE
+
+                    varName = this._tokens.shift()
+                    if(typeof varName != 'object') {
+                      this._throwStateError('Defuzzify block declaration must be followed by name')
+                    }
+                    else {
+                      this._topHeapObject().set('var', this._getVar(varName.value))
+                    }
                     break
 
                   case 'RULEBLOCK_BLOCK_START_TKN':
                     this._addHeapObject(new objects.RuleBlock())
                     this._currentState = states.RULE_BLOCK_STATE
+
+                    name = this._tokens.shift()
+                    if(typeof name != 'object') {
+                      this._throwStateError('Rule block declaration must be followed by name')
+                    }
+                    else {
+                      this._topHeapObject().set('name', name.value)
+                    }
                     break
                 }
-
-                this._topHeapObject().set('name', this._tokens.shift().value)
               }
               break
             case 'FUNCTION_BLOCK_END_TKN':
@@ -112,26 +135,15 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
           return this._returnVal()
         }
         else {
+          this._addHeapObject(new objects.Var({type: objects.VarTypes.INPUT}))
           varName = this._tokens.shift()
           if(typeof varName != 'object') {
             this._throwStateError('Var line must begin with a variable name')
           }
           else {
-            obj = new objects.Var({name: varName, type: objects.VarTypes.INPUT})
+            this._topHeapObject().set('name', varName.value)
           }
-
-          this._checkColon('Var names and types')
-
-          varType = this._tokens.shift()
-
-          if(varType == 'REAL_VAR_TKN') {
-            obj.set('dataType', objects.VarDataTypes.REAL)
-          }
-          else {
-            this._throwStateError('Unknown var data type: ' + varType)
-          }
-
-          this._checkSemicolon('Var definitions')
+          this._currentState = states.VAR_STATE
         }
         break
 
@@ -148,26 +160,15 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
           return this._returnVal()
         }
         else {
+          this._addHeapObject(new objects.Var({type: objects.VarTypes.OUTPUT}))
           varName = this._tokens.shift()
           if(typeof varName != 'object') {
             this._throwStateError('Var line must begin with a variable name')
           }
           else {
-            obj = new objects.Var({name: varName, type: objects.VarTypes.OUTPUT})
+            this._topHeapObject().set('name', varName.value)
           }
-
-          this._checkColon('Var names and types')
-
-          varType = this._tokens.shift()
-
-          if(varType == 'REAL_VAR_TKN') {
-            obj.set('dataType', objects.VarDataTypes.REAL)
-          }
-          else {
-            this._throwStateError('Unknown var data type: ' + varType)
-          }
-
-          this._checkSemicolon('Var definitions')
+          this._currentState = states.VAR_STATE
         }
         break
 
@@ -184,32 +185,54 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
           return this._returnVal()
         }
         else {
+          this._addHeapObject(new objects.Var({type: objects.VarTypes.LOCAL}))
           varName = this._tokens.shift()
           if(typeof varName != 'object') {
             this._throwStateError('Var line must begin with a variable name')
           }
           else {
-            obj = new objects.Var({name: varName, type: objects.VarTypes.LOCAL})
+            this._topHeapObject().set('name', varName.value)
           }
+          this._currentState = states.VAR_STATE
+        }
+        break
 
-          this._checkColon('Var names and types')
+      case states.VAR_STATE:
+        this._checkColon('Var names and types')
 
-          varType = this._tokens.shift()
+        varType = this._tokens.shift()
 
-          if(varType == 'REAL_VAR_TKN') {
-            obj.set('dataType', objects.VarDataTypes.REAL)
-          }
-          else {
-            this._throwStateError('Unknown var data type: ' + varType)
-          }
+        if(varType == 'REAL_VAR_TKN') {
+          this._topHeapObject().set('dataType', objects.VarDataTypes.REAL)
+        }
+        else {
+          this._throwStateError('Unknown var data type: ' + varType)
+        }
 
-          this._checkSemicolon('Var definitions')
+        this._checkSemicolon('Var definitions')
+
+        this._addVar(this._topHeapObject().name, this._topHeapObject())
+
+        type = this._topHeapObject().type
+
+        this._mergeHeapArrayObject('vars')
+
+        switch(type) {
+          case objects.VarTypes.INPUT:
+            this._currentState = states.INVARS_STATE
+            break
+          case objects.VarTypes.OUTPUT:
+            this._currentState = states.OUTVARS_STATE
+            break
+          case objects.VarTypes.LOCAL:
+            this._currentState = states.OTHERVARS_STATE
+            break
         }
         break
 
       case states.FUZZ_STATE:
         if(this._tokens.length == 0) {
-          return returnVal()
+          return this._returnVal()
         }
         else {
           switch(this._tokens.shift()) {
@@ -231,7 +254,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.DEFUZZ_STATE:
         if(this._tokens.length == 0) {
-          return returnVal()
+          return this._returnVal()
         }
         else {
           switch(this._tokens.shift()) {
@@ -327,7 +350,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.TERM_STATE:
         if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
-          return returnVal()
+          return this._returnVal()
         }
         else {
           termName = this._tokens.shift()
@@ -336,7 +359,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
             this._throwStateError('Term name must be provided')
           }
           else {
-            this._topHeapObject().set('name', termName)
+            this._topHeapObject().set('name', termName.value)
           }
 
           this._checkAssign('Term', 'function')
@@ -344,74 +367,54 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
           switch(this._tokens[0]) {
             case 'TRIAN_TKN':
               this._tokens.shift()
-              min = this._tokens.shift()
-              mid = this._tokens.shift()
-              max = this._tokens.shift()
+              min = this._getNumOrVar(this._tokens.shift(), 'Trian parameters')
+              mid = this._getNumOrVar(this._tokens.shift(), 'Trian parameters')
+              max = this._getNumOrVar(this._tokens.shift(), 'Trian parameters')
 
-              if(typeof min != 'object' || typeof mid != 'object' || typeof max != 'object') {
-                this._throwStateError('Trian parameters must be numbers')
-              }
-
-              this._topHeapObject().set('func', new objects.Trian({min: min.value, mid: mid.value, max: max.value}))
+              this._topHeapObject().set('func', new objects.Trian({min: min, mid: mid, max: max}))
 
               this._checkSemicolon('Term definitions')
               break
 
             case 'TRAPE_TKN':
               this._tokens.shift()
-              min = this._tokens.shift()
-              midLow = this._tokens.shift()
-              midHigh = this._tokens.shift()
-              max = this._tokens.shift()
+              min = this._getNumOrVar(this._tokens.shift(), 'Trape parameters')
+              midLow = this._getNumOrVar(this._tokens.shift(), 'Trape parameters')
+              midHigh = this._getNumOrVar(this._tokens.shift(), 'Trape parameters')
+              max = this._getNumOrVar(this._tokens.shift(), 'Trape parameters')
 
-              if(typeof min != 'object' || typeof midLow != 'object' || typeof midHigh != 'object' || typeof max != 'object') {
-                this._throwStateError('Trape parameters must be numbers')
-              }
-
-              this._topHeapObject().set('func', new objects.Trape({min: min.value, midLow: midLow.value, midHigh: midHigh.value, max: max.value}))
+              this._topHeapObject().set('func', new objects.Trape({min: min, midLow: midLow, midHigh: midHigh, max: max}))
 
               this._checkSemicolon('Term definitions')
               break
 
             case 'GAUSS_TKN':
               this._tokens.shift()
-              mean = this._tokens.shift()
-              stdev = this._tokens.shift()
+              mean = this._getNumOrVar(this._tokens.shift(), 'Gauss parameters')
+              stdev = this._getNumOrVar(this._tokens.shift(), 'Gauss parameters')
 
-              if(typeof mean != 'object' || typeof stdev != 'object') {
-                this._throwStateError('Gauss parameters must be numbers')
-              }
-
-              this._topHeapObject().set('func', new objects.Gauss({mean: mean.value, stdev: stdev.value}))
+              this._topHeapObject().set('func', new objects.Gauss({mean: mean, stdev: stdev}))
 
               this._checkSemicolon('Term definitions')
               break
 
             case 'GBELL_TKN':
               this._tokens.shift()
-              a = this._tokens.shift()
-              b = this._tokens.shift()
-              mean = this._tokens.shift()
+              a = this._getNumOrVar(this._tokens.shift(), 'Gbell parameters')
+              b = this._getNumOrVar(this._tokens.shift(), 'Gbell parameters')
+              mean = this._getNumOrVar(this._tokens.shift(), 'Gbell parameters')
 
-              if(typeof a != 'object' || typeof b != 'object' || typeof mean != 'object' || typeof max != 'object') {
-                this._throwStateError('Gbell parameters must be numbers')
-              }
-
-              this._topHeapObject().set('func', new objects.Gbell({a: a.value, b: b.value, mean: mean.value}))
+              this._topHeapObject().set('func', new objects.Gbell({a: a, b: b, mean: mean}))
 
               this._checkSemicolon('Term definitions')
               break
 
             case 'SIGM_TKN':
               this._tokens.shift()
-              gain = this._tokens.shift()
-              center = this._tokens.shift()
+              gain = this._getNumOrVar(this._tokens.shift(), 'Sigm parameters')
+              center = this._getNumOrVar(this._tokens.shift(), 'Sigm parameters')
 
-              if(typeof gain != 'object' || typeof center != 'object') {
-                this._throwStateError('Sigm parameters must be numbers')
-              }
-
-              this._topHeapObject().set('func', new objects.Sigm({gain: gain.value, center: center.value}))
+              this._topHeapObject().set('func', new objects.Sigm({gain: gain, center: center}))
 
               this._checkSemicolon('Term definitions')
               break
@@ -422,19 +425,13 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               while(this._tokens[0] == 'LEFT_PAREN_TKN') {
                 this._tokens.shift()
 
-                x = this._tokens.shift()
-                if(typeof x != 'object') {
-                  this._throwStateError('Piecewise functions must have integer points')
-                }
+                x = this._getNumOrVar(this._tokens.shift(), 'Point parameters')
 
                 if(this._tokens.shift() != 'COMMA_TKN') {
                   this._throwStateError('Piecewise points must have two comma-separated values')
                 }
 
-                y = this._tokens.shift()
-                if(typeof y != 'object') {
-                  this._throwStateError('Piecewise functions must have integer points')
-                }
+                y = this._getNumOrVar(this._tokens.shift(), 'Point parameters')
 
                 if(this._tokens.shift() != 'RIGHT_PAREN_TKN') {
                   this._throwStateError('Unmatched left parenthesis in piecewise point')
@@ -449,13 +446,16 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               break
 
             case 'FUNC_TKN':
+              // @TODO test how this is lexed
               // FUNCTION (inVar * 3.0) + 5 * SIN(inVar);
 
               break
 
             default:
               if(typeof this._tokens[0] == 'object') {
-                this._topHeapObject().set('func', new objects.Singleton({value: this._tokens.shift().value}))
+                val = this._getNumOrVar(this._tokens.shift(), 'Singleton parameters')
+
+                this._topHeapObject().set('func', new objects.Singleton({value: val}))
 
                 this._checkSemicolon('Term definitions')
               }
@@ -465,6 +465,9 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
           }
 
           this._mergeHeapArrayObject('terms')
+
+          // Set terms to appropriate var for checking in rule phase
+          this._topHeapObject().var.set('terms', this._topHeapObject().terms)
 
           if(this._topHeapObject() instanceof objects.FuzzifyBlock) {
             this._currentState = states.FUZZ_STATE
@@ -476,8 +479,16 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         break
 
       case states.RULE_BLOCK_STATE:
-        if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
-          return returnVal()
+        if(this._tokens.length == 0) {
+          return this._returnVal()
+        }
+        else if(this._tokens[0] == 'RULEBLOCK_BLOCK_END_TKN') {
+          this._tokens.shift()
+          this._mergeHeapArrayObject('ruleBlocks')
+          this._currentState = states.FUNCTION_STATE
+        }
+        else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
+          return this._returnVal()
         }
         else {
           andDef = new objects.OperatorDef({operator: objects.Operators.AND})
@@ -603,8 +614,174 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.RULE_STATE:
         this._checkColon('Rule numbers and definitions')
+
+        if(this._tokens.shift() != 'IF_CONDITION_TKN') {
+          this._throwStateError('Rules must begin with an IF clause')
+        }
+
+        subTokens = []
+        while(this._tokens[0] != 'THEN_CONDITION_TKN') {
+          if(this._tokens[0] == 'SEMICOLON_TKN' || this._tokens[0] == 'WITH_CONDITION_TKN') {
+            this._throwStateError('Rules must contain a THEN clause')
+          }
+          else {
+            subTokens.push(this._tokens.shift())
+          }
+        }
+
+        this._topHeapObject().set('ifCond', this._recursiveExpr(subTokens))
+
+        subTokens = []
+        this._tokens.shift()
+        while(this._tokens[0] != 'SEMICOLON_TKN' && this._tokens[0] != 'WITH_CONDITION_TKN') {
+          subTokens.push(this._tokens.shift())
+        }
+
+        this._topHeapObject().set('thenCond', this._recursiveExpr(subTokens))
+
+        if(this._tokens[0] == 'WITH_CONDITION_TKN') {
+          this._tokens.shift()
+
+          w = this._getNumOrVar(this._tokens.shift(), 'With conditions')
+          this._topHeapObject().set('withCond', new objects.WithCond({value: w}))
+        }
+
+        this._checkSemicolon('Rule numbers and definitions')
+
+        this._mergeHeapArrayObject('rules')
+
+        this._currentState = states.RULE_BLOCK_STATE
         break
     }
+  }
+}
+
+parser.prototype._recursiveExpr = function(tokens) {
+  // Resolve all assertions to objects
+  while(tokens.indexOf('IS_LOGIC_TKN') != -1) {
+    assert = new objects.Assertion()
+    isTkn = tokens.indexOf('IS_LOGIC_TKN')
+    varTkn = isTkn - 1
+    termTkn = isTkn + 1
+
+    v = this._getVar(tokens[varTkn].value)
+    assert.set('var', v)
+
+    if(tokens[termTkn] == 'NOT_LOGIC_TKN') {
+      assert.set('not', true)
+      termTkn++
+    }
+
+    term = this._getVarTerm(v, tokens[termTkn].value)
+    if(term == null) {
+      this._throwStateError('Var ' + v.name + ' does not have term ' + tokens[termTkn].value)
+    }
+    else {
+      assert.set('term', term)
+    }
+
+    tokens = tokens.splice(0, varTkn).concat([assert]).concat(tokens.splice(termTkn + 1, tokens.length))
+  }
+
+  // Recursively resolve all parenthetical expressions
+  while(tokens.indexOf('LEFT_PAREN_TKN') != -1) {
+    parenStart = tokens.indexOf('LEFT_PAREN_TKN')
+    counter = parenStart + 1
+    numLeftParen = 1
+    while(numLeftParen > 0) {
+      if(tokens[counter] == 'LEFT_PAREN_TKN') {
+        numLeftParen++
+      }
+      if(tokens[counter] == 'RIGHT_PAREN_TKN') {
+        numLeftParen--
+      }
+    }
+
+    expr = [this._recursiveExpr(tokens.slice(parenStart + 1, counter))]
+    tokens = tokens.slice(0, parenStart).concat(expr).concat(tokens.slice(counter + 1))
+  }
+
+  // Resolve all ANDs to expressions
+  while(tokens.indexOf('AND_TKN') != -1) {
+    and = tokens.indexOf('AND_TKN')
+    expr = new objects.Expression({operator: objects.Operators.AND})
+    expr.set('firstHalf', tokens[and - 1])
+    expr.set('secondHalf', tokens[and + 1])
+    tokens = tokens.splice(0, and).concat([expr]).concat(tokens.splice(and + 1, tokens.length))
+  }
+
+  // Resolve all ORs to expressions
+  while(tokens.indexOf('OR_TKN') != -1) {
+    and = tokens.indexOf('OR_TKN')
+    expr = new objects.Expression({operator: objects.Operators.OR})
+    expr.set('firstHalf', tokens[and - 1])
+    expr.set('secondHalf', tokens[and + 1])
+    tokens = tokens.splice(0, and).concat([expr]).concat(tokens.splice(and + 1, tokens.length))
+  }
+
+  // Should now just be one expression left
+  return tokens[0]
+}
+
+parser.prototype._isNumber = function(v) {
+  try { 
+    parseInt(v); 
+  } catch(e) { 
+    return false; 
+  }
+  return true;
+}
+
+parser.prototype._getNumOrVar = function(tkn, context) {
+  if(typeof tkn != 'object') {
+    this._throwStateError(context + ' must be numbers or variables')
+  }
+  else if(this._isNumber(tkn.value)) {
+    return tkn.value
+  }
+  else {
+    v = this._getVar(tkn.value)
+    if(v == null) {
+      this._throwVarError(tkn.value)
+    }
+    else {
+      return v
+    }
+  }
+}
+
+parser.prototype._getVar = function(name) {
+  filtered = this._vars.filter(function(v) {
+    return v.name == name
+  })
+
+  if(filtered.length == 0) {
+    return null
+  }
+  else {
+    return filtered[0]
+  }
+}
+
+parser.prototype._addVar = function(name, v) {
+  if(this._getVar(name) != null) {
+    this._throwStateError('Duplicate var declaration: ' + name)
+  }
+  else {
+    this._vars.push(v)
+  }
+}
+
+parser.prototype._getVarTerm = function(v, name) {
+  filtered = v.terms.filter(function(t) {
+    return t.name == name
+  })
+
+  if(filtered.length == 0) {
+    return null
+  }
+  else {
+    return filtered[0]
   }
 }
 
@@ -629,8 +806,12 @@ parser.prototype._checkColon = function(context) {
   }
 }
 
+parser.prototype._throwVarError = function(name) {
+  this._throwStateError('Unknown var: ' + name)
+}
+
 parser.prototype._throwStateError = function(msg) {
-  throw 'State error: '+msg
+  throw 'State error: ' + msg
 }
 
 parser.prototype._addHeapObject = function(obj) {

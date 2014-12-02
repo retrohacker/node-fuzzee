@@ -435,7 +435,7 @@ exports.Assertion = function() {
   this.get = function() {
     var that = createObject(exports.Assertion.prototype)
     that.var = checkType(this, "var", exports.Var, false)
-    that.value = checkExists(this, "val")
+    that.value = checkType(this, "var", exports.Term, false)
     that.not = checkType(this, "not", BOOL_TYPE, true)
     return that
   }

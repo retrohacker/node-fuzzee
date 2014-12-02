@@ -4,10 +4,11 @@ var stateEnum = {
   INVARS_STATE : 2,
   OUTVARS_STATE : 3,
   OTHERVARS_STATE : 4,
-  FUZZ_STATE : 5,
-  DEFUZZ_STATE : 6,
-  TERM_STATE : 7,
-  RULE_BLOCK_STATE : 8,
-  RULE_STATE : 9
+  VAR_STATE : 5,
+  FUZZ_STATE : 6,
+  DEFUZZ_STATE : 7,
+  TERM_STATE : 8,
+  RULE_BLOCK_STATE : 9,
+  RULE_STATE : 10
 }
 module.exports = stateEnum;
