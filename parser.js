@@ -378,8 +378,6 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               this._topHeapObject().set('func', new objects.Trian({min: min.value, mid: mid.value, max: max.value}))
 
               this._checkSemicolon('Term definitions')
-
-              this._mergeHeapArrayObject('terms')
               break
 
             case 'TRAPE_TKN':
@@ -396,8 +394,6 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               this._topHeapObject().set('func', new objects.Trape({min: min.value, midLow: midLow.value, midHigh: midHigh.value, max: max.value}))
 
               this._checkSemicolon('Term definitions')
-
-              this._mergeHeapArrayObject('terms')
               break
 
             case 'GAUSS_TKN':
@@ -412,8 +408,6 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               this._topHeapObject().set('func', new objects.Gauss({mean: mean.value, stdev: stdev.value}))
 
               this._checkSemicolon('Term definitions')
-
-              this._mergeHeapArrayObject('terms')
               break
 
             case 'GBELL_TKN':
@@ -429,8 +423,6 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               this._topHeapObject().set('func', new objects.Gbell({a: a.value, b: b.value, mean: mean.value}))
 
               this._checkSemicolon('Term definitions')
-
-              this._mergeHeapArrayObject('terms')
               break
 
             case 'SIGM_TKN':
@@ -445,8 +437,6 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               this._topHeapObject().set('func', new objects.Sigm({gain: gain.value, center: center.value}))
 
               this._checkSemicolon('Term definitions')
-
-              this._mergeHeapArrayObject('terms')
               break
 
             case 'LEFT_PAREN_TKN':
@@ -479,8 +469,6 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               this._topHeapObject().set('func', piecewise)
 
               this._checkSemicolon('Term definitions')
-
-              this._mergeHeapArrayObject('terms')
               break
 
             case 'FUNC_TKN':
@@ -493,18 +481,24 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
                 this._topHeapObject().set('func', new objects.Singleton({value: this._tokens.shift().value}))
 
                 this._checkSemicolon('Term definitions')
-
-                this._mergeHeapArrayObject('terms')
               }
               else {
                 this._throwStateError('Unrecognized token in term definition')
               }
           }
+
+          this._mergeHeapArrayObject('terms')
+
+          if(this._topHeapObject() instanceof objects.FuzzifyBlock) {
+            this._currentState = states.FUZZ_STATE
+          }
+          else {
+            this._currentState = states.DEFUZZ_STATE
+          }
         }
         break
 
       case states.RULE_BLOCK_STATE:
-
         break
     }
   }
