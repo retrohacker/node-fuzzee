@@ -1,26 +1,44 @@
+var Transform = require('stream').Transform
+var util = require('util')
 var states = require('./definitions/states')
 var objects = require('./definitions/objects')
 
 var parser = module.exports = function constructor() {
+  Transform.call(this, {objectMode: true})
   this._currentState = states.START_STATE
   this._objectHeap = []
   this._tokens = []
   this._vars = []
+  this._neededTokens = 0
   this._returnObjects = []
 }
+util.inherits(parser, Transform);
 
-parser.prototype = new Object(Object.prototype)
-parser.prototype.constructor = parser
-module.exports = parser
+parser.prototype._transform = function(chunk, encoding, cb) {
+  tkn = chunk.toString()
+  try {
+    this._tokens = this._tokens.concat(JSON.parse(tkn))
+  } catch (e) {
+    this._tokens = this._tokens.concat(tkn)
+  }
 
-parser.prototype.nextToken = function nextTokens(newTokens) {
-  this._tokens = this._tokens.concat(newTokens)
+  if(this._tokens.length >= this._neededTokens) {
+    this._neededTokens = this._run()
+  }
 
+  retObj = []
+  while(this._returnObjects.length > 0) {
+    retObj.push(this._returnObjects.shift())
+  }
+  cb(null, retObj)
+}
+
+parser.prototype._run = function () {
   while(true) {
     switch(this._currentState) {
       case states.START_STATE:
-        if(this._tokens.length == 0) {
-          return this._returnVal()
+        if(this._tokens.length < 2) {
+          return 2;
         }
         else {
           if(this._tokens.shift() != 'FUNCTION_BLOCK_START_TKN') {
@@ -42,7 +60,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.FUNCTION_STATE:
         if(this._tokens.length == 0) {
-          return this._returnVal()
+          return 1
         }
         else {
           switch(this._tokens[0]) {
@@ -65,7 +83,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
             case 'DEFUZZIFY_BLOCK_START_TKN':
             case 'RULEBLOCK_BLOCK_START_TKN':
               if(this._tokens.length == 1) {
-                return this._returnVal()
+                return 2
               }
               else {
                 block = this._tokens.shift()
@@ -120,15 +138,15 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         break
       case states.INVARS_STATE:
         if(this._tokens.length == 0) {
-          return this._returnVal()
+          return 1
         }
         else if(this._tokens[0] == 'VAR_BLOCK_END_TKN') {
           this._tokens.shift()
           this._mergeHeapArrayObject('varBlocks')
           this._currentState = states.FUNCTION_STATE
         }
-        else if(this._tokens.length < 4) {
-          return this._returnVal()
+        else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
+          return 0
         }
         else {
           this._addHeapObject(new objects.Var({type: objects.VarTypes.INPUT}))
@@ -145,15 +163,15 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.OUTVARS_STATE:
         if(this._tokens.length == 0) {
-          return this._returnVal()
+          return 0
         }
         else if(this._tokens[0] == 'VAR_BLOCK_END_TKN') {
           this._tokens.shift()
           this._mergeHeapArrayObject('varBlocks')
           this._currentState = states.FUNCTION_STATE
         }
-        else if(this._tokens.length < 4) {
-          return this._returnVal()
+        else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
+          return 0
         }
         else {
           this._addHeapObject(new objects.Var({type: objects.VarTypes.OUTPUT}))
@@ -170,15 +188,15 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.OTHERVARS_STATE:
         if(this._tokens.length == 0) {
-          return this._returnVal()
+          return 1
         }
         else if(this._tokens[0] == 'VAR_BLOCK_END_TKN') {
           this._tokens.shift()
           this._mergeHeapArrayObject('varBlocks')
           this._currentState = states.FUNCTION_STATE
         }
-        else if(this._tokens.length < 4) {
-          return this._returnVal()
+        else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
+          return 0
         }
         else {
           this._addHeapObject(new objects.Var({type: objects.VarTypes.LOCAL}))
@@ -228,7 +246,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.FUZZ_STATE:
         if(this._tokens.length == 0) {
-          return this._returnVal()
+          return 1
         }
         else {
           switch(this._tokens.shift()) {
@@ -250,7 +268,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.DEFUZZ_STATE:
         if(this._tokens.length == 0) {
-          return this._returnVal()
+          return 1
         }
         else {
           switch(this._tokens.shift()) {
@@ -346,7 +364,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.TERM_STATE:
         if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
-          return this._returnVal()
+          return 0
         }
         else {
           termName = this._tokens.shift()
@@ -497,7 +515,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
       case states.RULE_BLOCK_STATE:
         if(this._tokens.length == 0) {
-          return this._returnVal()
+          return 1
         }
         else if(this._tokens[0] == 'RULEBLOCK_BLOCK_END_TKN') {
           this._tokens.shift()
@@ -505,7 +523,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
           this._currentState = states.FUNCTION_STATE
         }
         else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
-          return this._returnVal()
+          return 0
         }
         else {
           andDef = new objects.OperatorDef({operator: objects.Operators.AND})
@@ -858,17 +876,4 @@ parser.prototype._mergeHeapArrayObject = function(varName) {
   }
 }
 
-parser.prototype._returnVal = function() {
-  if(this._returnObjects.length == 0) {
-    return null
-  }
-  else {
-    objs = []
-    obj = this._returnObjects.shift()
-    while(typeof obj != 'undefined') {
-      objs.push(obj)
-      obj = this._returnObjects.shift()
-    }
-    return objs
-  }
-}
+module.exports = parser
