@@ -271,18 +271,24 @@ parser.prototype._run = function () {
           return 1
         }
         else {
-          switch(this._tokens.shift()) {
+          switch(this._tokens[0]) {
             case 'DEFUZZIFY_BLOCK_END_TKN':
+              this._tokens.shift()
               this._mergeStackArrayObject('defuzzifyBlocks')
               this._currentState = states.FUNCTION_STATE
               break
 
             case 'TERM_TKN':
+              this._tokens.shift()
               this._stackPush(new objects.Term())
               this._currentState = states.TERM_STATE
               break
 
             case 'METHOD_TKN':
+              if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
+                return 0
+              }
+              this._tokens.shift()
               this._checkColon('Method declarations')
 
               switch(this._tokens.shift()) {
@@ -314,6 +320,10 @@ parser.prototype._run = function () {
               break
 
             case 'DEFAULT_TKN':
+              if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
+                return 0
+              }
+              this._tokens.shift()
               this._checkAssign('Defuzzification default', 'value')
 
               def = this._tokens.shift()
@@ -331,6 +341,10 @@ parser.prototype._run = function () {
               break
 
             case 'RANGE_TKN':
+              if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
+                return 0
+              }
+              this._tokens.shift()
               this._checkAssign('Defuzzification range', 'value')
 
               if(this._tokens.shift() != 'LEFT_PAREN_TKN') {
