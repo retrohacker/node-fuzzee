@@ -101,12 +101,8 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
                     this._addHeapObject(new objects.RuleBlock())
                     this._currentState = states.RULE_BLOCK_STATE
 
-                    name = this._tokens.shift()
-                    if(typeof name != 'object') {
-                      this._throwStateError('Rule block declaration must be followed by name')
-                    }
-                    else {
-                      this._topHeapObject().set('name', name.value)
+                    if(typeof this._tokens[0] == 'object') {
+                      this._topHeapObject().set('name', this._tokens.shift().value)
                     }
                     break
                 }
@@ -446,9 +442,30 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               break
 
             case 'FUNC_TKN':
-              // @TODO test how this is lexed
-              // FUNCTION (inVar * 3.0) + 5 * SIN(inVar);
+              this._tokens.shift()
+              funString = ''
+              while(this._tokens[0] != 'SEMICOLON_TKN') {
+                tkn = this._tokens.shift()
+                if(typeof tkn == 'object') {
+                  funString += this._jsMathFunctions(tkn.value)
+                }
+                else {
+                  switch(tkn) {
+                    case 'LEFT_PAREN_TKN':
+                      funString += '('
+                      break
+                    case 'RIGHT_PAREN_TKN':
+                      funString += ')'
+                      break
+                    default:
+                      this._throwStateError('Unknown token in term function declaration')
+                  }
+                }
+              }
 
+              this._topHeapObject().set('func', new objects.Func({func: funString}))
+
+              this._checkSemicolon('Term definitions')
               break
 
             default:
@@ -654,6 +671,10 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         break
     }
   }
+}
+
+parser.prototype._jsMathFunctions = function(token) {
+  return token.replace('SIN', 'Math.sin')
 }
 
 parser.prototype._recursiveExpr = function(tokens) {
