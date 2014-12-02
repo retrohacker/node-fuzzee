@@ -5,7 +5,7 @@ var objects = require('./definitions/objects')
 var currentState, objectHeap, tokens, returnObjects
 
 function throwStateError(msg) {
-  throw "State error: "
+  throw "State error: "+msg
 }
 
 function addHeapObject(obj) {
@@ -41,11 +41,15 @@ function returnVal() {
   }
 }
 
-var parser = module.exports = function constructor() {
+var parser = function constructor() {
   currentState = states.START_STATE
   objectHeap = []
   tokens = []
 }
+
+parser.prototype = new Object(Object.prototype)
+parser.prototype.constructor = parser
+module.exports = parser
 
 parser.prototype.nextToken = function nextTokens(newTokens) {
   tokens.concat(newTokens)
