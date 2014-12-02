@@ -9,6 +9,10 @@ var parser = module.exports = function constructor() {
   this._returnObjects = []
 }
 
+parser.prototype = new Object(Object.prototype)
+parser.prototype.constructor = parser
+module.exports = parser
+
 parser.prototype.nextToken = function nextTokens(newTokens) {
   this._tokens.concat(newTokens)
 
@@ -394,7 +398,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 }
 
 parser.prototype._throwStateError = function(msg) {
-  throw "State error: "
+  throw "State error: "+msg
 }
 
 parser.prototype._addHeapObject = function(obj) {
