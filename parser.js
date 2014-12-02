@@ -14,7 +14,7 @@ parser.prototype.constructor = parser
 module.exports = parser
 
 parser.prototype.nextToken = function nextTokens(newTokens) {
-  this._tokens.concat(newTokens)
+  this._tokens = this._tokens.concat(newTokens)
 
   while(true) {
     switch(this._currentState) {
@@ -23,7 +23,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
           return this._returnVal()
         }
         else {
-          if(this._tokens.shift() != t.FUNCTION_BLOCK_START_TKN) {
+          if(this._tokens.shift() != "FUNCTION_BLOCK_START_TKN") {
             this._throwStateError("Engine must start with function block definition")
           }
           else {
@@ -45,25 +45,22 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
           return this._returnVal()
         }
         else {
-          switch(this._tokens.first) {
-            case t.VAR_INPUT_BLOCK_START_TKN:
+          switch(this._tokens[0]) {
+            case "VAR_INPUT_BLOCK_START_TKN":
               this._addHeapObject(new objects.VarBlock())
               this._currentState = states.INVARS_STATE
               break
-
-            case t.VAR_OUTPUT_BLOCK_START_TKN:
+            case "VAR_OUTPUT_BLOCK_START_TKN":
               this._addHeapObject(new objects.VarBlock())
               this._currentState = states.OUTVARS_STATE
               break
-
-            case t.VAR_BLOCK_START_TKN:
+            case "VAR_BLOCK_START_TKN":
               this._addHeapObject(new objects.VarBlock())
               this._currentState = states.OTHERVARS_STATE
               break
-
-            case t.FUZZIFY_BLOCK_START_TKN:
-            case t.DEFUZZIFY_BLOCK_START_TKN:
-            case t.RULEBLOCK_BLOCK_START_TKN:
+            case "FUZZIFY_BLOCK_START_TKN":
+            case "DEFUZZIFY_BLOCK_START_TKN":
+            case "RULEBLOCK_BLOCK_START_TKN":
               if(this._tokens.size == 1) {
                 return this._returnVal()
               }
@@ -71,17 +68,17 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
                 block = this._tokens.shift()
 
                 switch(block) {
-                  case t.FUZZIFY_BLOCK_START_TKN:
+                  case "FUZZIFY_BLOCK_START_TKN":
                     this._addHeapObject(new objects.FuzzifyBlock())
                     this._currentState = states.FUZZ_STATE
                     break
 
-                  case t.DEFUZZIFY_BLOCK_START_TKN:
+                  case "DEFUZZIFY_BLOCK_START_TKN":
                     this._addHeapObject(new objects.DefuzzifyBlock())
                     this._currentState = states.FUZZ_STATE
                     break
 
-                  case t.RULEBLOCK_BLOCK_START_TKN:
+                  case "RULEBLOCK_BLOCK_START_TKN":
                     this._addHeapObject(new objects.RuleBlock())
                     this._currentState = states.FUZZ_STATE
                     break
@@ -89,17 +86,17 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 
                 this._topHeapObject().set("name", this._tokens.shift().value)
               }
+              break
             default:
               this._throwStateError("Function block must contain var, fuzzify, defuzzify, or rule block")
           }
         }
         break
-
       case states.INVARS_STATE:
         if(this._tokens.size == 0) {
           return this._returnVal()
         }
-        else if(this._tokens.first == t.VAR_BLOCK_END_TKN) {
+        else if(this._tokens[0] == "VAR_BLOCK_END_TKN") {
           this._mergeHeapArrayObject("varBlocks")
           this._currentState = states.FUNCTION_STATE
         }
@@ -115,20 +112,20 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
             obj = new objects.Var({name: varName, type: objects.VarTypes.INPUT})
           }
 
-          if(this._tokens.shift() != t.COLON_TKN) {
+          if(this._tokens.shift() != "COLON_TKN") {
             this._throwStateError("Var names and types must be separated by a colon")
           }
 
           varType = this._tokens.shift()
 
-          if(varType == objects.VarDataTypes.REAL) {
+          if(varType == "REAL_VAR_TKN") {
             obj.set("dataType", objects.VarDataTypes.REAL)
           }
           else {
             this._throwStateError("Unknown var data type: " + varType)
           }
 
-          if(this._tokens.shift() != t.SEMICOLON_TKN) {
+          if(this._tokens.shift() != "SEMICOLON_TKN") {
             this._throwStateError("Var definitions must be terminated by a semicolon")
           }
         }
@@ -138,7 +135,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         if(this._tokens.size == 0) {
           return this._returnVal()
         }
-        else if(this._tokens.first == t.VAR_BLOCK_END_TKN) {
+        else if(this._tokens[0] == "VAR_BLOCK_END_TKN") {
           this._mergeHeapArrayObject("varBlocks")
           this._currentState = states.FUNCTION_STATE
         }
@@ -177,7 +174,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         if(this._tokens.size == 0) {
           return this._returnVal()
         }
-        else if(this._tokens.first == t.VAR_BLOCK_END_TKN) {
+        else if(this._tokens[0] == t.VAR_BLOCK_END_TKN) {
           this._mergeHeapArrayObject("varBlocks")
           this._currentState = states.FUNCTION_STATE
         }
@@ -216,11 +213,11 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         if(this._tokens.length == 0) {
           return returnVal()
         }
-        else if(this._tokens.first() == t.FUZZIFY_BLOCK_END_TKN) {
+        else if(this._tokens[0] == t.FUZZIFY_BLOCK_END_TKN) {
           this._mergeHeapArrayObject("fuzzifyBlocks")
           this._currentState = states.FUNCTION_STATE
         }
-        else if(this._tokens.first() == t.TERM_TKN) {
+        else if(this._tokens[0] == t.TERM_TKN) {
           if(this._tokens.indexOf(t.SEMICOLON_TKN) == -1) {
             return returnVal()
           }
@@ -241,7 +238,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               this._throwStateError("Term must be assigned function")
             }
 
-            switch(this._tokens.first) {
+            switch(this._tokens[0]) {
               case TRIAN_TKN:
                 this._tokens.shift()
                 min = this._tokens.shift()
@@ -329,7 +326,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               case LEFT_PAREN_TKN:
                 piecewise = new exports.Piecewise({points: []})
 
-                while(this._tokens.first == t.LEFT_PAREN_TKN) {
+                while(this._tokens[0] == t.LEFT_PAREN_TKN) {
                   this._tokens.shift()
 
                   x = this._tokens.shift()
@@ -366,7 +363,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
                 break
 
               default:
-                if(typeof this._tokens.first == 'object') {
+                if(typeof this._tokens[0] == 'object') {
                   this._topHeapObject().set("func", new exports.Singleton({value: this._tokens.shift().value}))
 
                   if(this._tokens.shift() != t.SEMICOLON_TKN) {
