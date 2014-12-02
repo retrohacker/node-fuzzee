@@ -7,6 +7,7 @@ var stateEnum = {
   FUZZ_STATE : 5,
   DEFUZZ_STATE : 6,
   TERM_STATE : 7,
-  RULE_BLOCK_STATE : 8
+  RULE_BLOCK_STATE : 8,
+  RULE_STATE : 9
 }
 module.exports = stateEnum;

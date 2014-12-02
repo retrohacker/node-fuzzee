@@ -120,9 +120,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
             obj = new objects.Var({name: varName, type: objects.VarTypes.INPUT})
           }
 
-          if(this._tokens.shift() != 'COLON_TKN') {
-            this._throwStateError('Var names and types must be separated by a colon')
-          }
+          this._checkColon('Var names and types')
 
           varType = this._tokens.shift()
 
@@ -158,9 +156,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
             obj = new objects.Var({name: varName, type: objects.VarTypes.OUTPUT})
           }
 
-          if(this._tokens.shift() != 'COLON_TKN') {
-            this._throwStateError('Var names and types must be separated by a colon')
-          }
+          this._checkColon('Var names and types')
 
           varType = this._tokens.shift()
 
@@ -196,9 +192,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
             obj = new objects.Var({name: varName, type: objects.VarTypes.LOCAL})
           }
 
-          if(this._tokens.shift() != 'COLON_TKN') {
-            this._throwStateError('Var names and types must be separated by a colon')
-          }
+          this._checkColon('Var names and types')
 
           varType = this._tokens.shift()
 
@@ -252,9 +246,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               break
 
             case 'METHOD_TKN':
-              if(this._tokens.shift() != 'COLON_TKN') {
-                this._throwStateError('Method must be denoted by a colon')
-              }
+              this._checkColon('Method declarations')
 
               switch(this._tokens.shift()) {
                 case  'COG_METHOD_TKN':
@@ -285,12 +277,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               break
 
             case 'DEFAULT_TKN':
-              if(this._tokens.shift() != 'ASSIGN_TKN') {
-                // @TODO: Strip out this if condition after lexer bug fixed
-                if(this._tokens.shift() != 'terminators') {
-                  this._throwStateError('Default must be assigned value')
-                }
-              }
+              this._checkAssign('Defuzzification default', 'value')
 
               def = this._tokens.shift()
               if(typeof def == 'object') {
@@ -307,12 +294,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
               break
 
             case 'RANGE_TKN':
-              if(this._tokens.shift() != 'ASSIGN_TKN') {
-                // @TODO: Strip out this if condition after lexer bug fixed
-                if(this._tokens.shift() != 'terminators') {
-                  this._throwStateError('Defuzzification range must be assigned value')
-                }
-              }
+              this._checkAssign('Defuzzification range', 'value')
 
               if(this._tokens.shift() != 'LEFT_PAREN_TKN') {
                 this._throwStateError('Defuzzification range must be denoted by parentheses')
@@ -357,12 +339,7 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
             this._topHeapObject().set('name', termName)
           }
 
-          if(this._tokens.shift() != 'ASSIGN_TKN') {
-            // @TODO: Strip out this if condition after lexer bug fixed
-            if(this._tokens.shift() != 'terminators') {
-              this._throwStateError('Term must be assigned function')
-            }
-          }
+          this._checkAssign('Term', 'function')
 
           switch(this._tokens[0]) {
             case 'TRIAN_TKN':
@@ -499,7 +476,143 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
         break
 
       case states.RULE_BLOCK_STATE:
+        if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
+          return returnVal()
+        }
+        else {
+          andDef = new objects.OperatorDef({operator: objects.Operators.AND})
+          orDef = new objects.OperatorDef({operator: objects.Operators.OR})
+
+          switch(this._tokens.shift()) {
+            case 'RULE_TKN':
+              ruleNum = this._tokens.shift()
+              if(typeof ruleNum != 'object') {
+                this._throwStateError('Rules must begin with a number')
+              }
+              else {
+                this._addHeapObject(new objects.Rule({number: ruleNum.value}))
+                this._currentState = states.RULE_STATE
+              }
+              break
+
+            case 'AND_TKN':
+              this._checkColon('Ruleblock operator definitions')
+
+              switch(this._tokens.shift()) {
+                case 'MIN_TKN':
+                  andDef.set('func', objects.OperatorFuncs.MIN)
+                  orDef.set('func', objects.OperatorFuncs.MAX)
+                  break
+
+                case 'PROD_TKN':
+                  andDef.set('func', objects.OperatorFuncs.PROD)
+                  orDef.set('func', objects.OperatorFuncs.ASUM)
+                  break
+
+                case 'AND_METHOD_BDIF_TKN':
+                  andDef.set('func', objects.OperatorFuncs.BDIF)
+                  orDef.set('func', objects.OperatorFuncs.BSUM)
+                  break
+
+                default:
+                  this._throwStateError('Unknown AND operator definition in ruleblock')
+              }
+
+              this._topHeapObject().set('andOperatorDef', andDef)
+              this._topHeapObject().set('orOperatorDef', andDef)
+
+              this._checkSemicolon('Ruleblock operator definitions')
+              break
+
+            case 'OR_TKN':
+              this._checkColon('Ruleblock operator definitions')
+
+              switch(this._tokens.shift()) {
+                case 'MAX_TKN':
+                  andDef.set('func', objects.OperatorFuncs.MIN)
+                  orDef.set('func', objects.OperatorFuncs.MAX)
+                  break
+
+                case 'OR_METHOD_ASUM_TKN':
+                  andDef.set('func', objects.OperatorFuncs.PROD)
+                  orDef.set('func', objects.OperatorFuncs.ASUM)
+                  break
+
+                case 'BSUM_TKN':
+                  andDef.set('func', objects.OperatorFuncs.BDIF)
+                  orDef.set('func', objects.OperatorFuncs.BSUM)
+                  break
+
+                default:
+                  this._throwStateError('Unknown OR operator definition in ruleblock')
+              }
+
+              this._topHeapObject().set('andOperatorDef', andDef)
+              this._topHeapObject().set('orOperatorDef', andDef)
+
+              this._checkSemicolon('Ruleblock operator definitions')
+              break
+
+            case 'ACTIVATION_METHOD_TKN':
+              this._checkColon('Ruleblock activation method definitions')
+
+              switch(this._tokens.shift()) {
+                case 'PROD_TKN':
+                  this._topHeapObject().set('activationMethod', objects.ActivationMethods.PROD)
+                  break
+
+                case 'MIN_TKN':
+                  this._topHeapObject().set('activationMethod', objects.ActivationMethods.MIN)
+                  break
+
+                default:
+                  this._throwStateError('Unknown activation method in ruleblock')
+              }
+
+              this._checkSemicolon('Ruleblock activation method definitions')
+              break
+
+            case 'ACCUMULATION_METHOD_TKN':
+              this._checkColon('Ruleblock accumulation method definitions')
+
+              switch(this._tokens.shift()) {
+                case 'MAX_TKN':
+                  this._topHeapObject().set('accumulationMethod', objects.AccumulationMethods.MAX)
+                  break
+
+                case 'BSUM_TKN':
+                  this._topHeapObject().set('accumulationMethod', objects.AccumulationMethods.BSUM)
+                  break
+
+                case 'ACCUM_METHOD_NSUM_TKN':
+                  this._topHeapObject().set('accumulationMethod', objects.AccumulationMethods.NSUM)
+                  break
+
+                default:
+                  this._throwStateError('Unknown accumulation method in ruleblock')
+              }
+
+              this._checkSemicolon('Ruleblock accumulation method definitions')
+              break
+
+            default:
+              this._throwStateError('Unknown declaration in ruleblock')
+          }
+        }
         break
+
+      case states.RULE_STATE:
+        this._checkColon('Rule numbers and definitions')
+        break
+    }
+  }
+}
+
+parser.prototype._checkAssign = function(contextStart, contextEnd) {
+  if(this._tokens.shift() != 'ASSIGN_TKN') {
+    // @TODO: Strip out this if condition after lexer bug fixed
+    if(this._tokens.shift() != 'terminators') {
+      this._throwStateError(contextStart + ' must be assigned a ' + contextEnd)
     }
   }
 }
@@ -507,6 +620,12 @@ parser.prototype.nextToken = function nextTokens(newTokens) {
 parser.prototype._checkSemicolon = function(context) {
   if(this._tokens.shift() != 'SEMICOLON_TKN') {
     this._throwStateError(context + ' must be terminated by a semicolon')
+  }
+}
+
+parser.prototype._checkColon = function(context) {
+  if(this._tokens.shift() != 'COLON_TKN') {
+    this._throwStateError(context + ' must be separated by a colon')
   }
 }
 

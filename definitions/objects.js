@@ -471,6 +471,7 @@ exports.Rule = function() {
 
   this.get = function() {
     var that = createObject(exports.Rule.prototype)
+    that.number = checkType(this, "number", NUMBER_TYPE, false)
     that.ifCond = checkType(this, "ifCond", [exports.Assertion, exports.Expression], false)
     that.thenCond = checkType(this, "thenCond", [exports.Assertion, exports.Expression], false)
     that.withCond = checkType(this, "withCond", exports.WithCond, true)
@@ -485,7 +486,8 @@ exports.RuleBlock = function() {
   this.get = function() {
     var that = createObject(exports.RuleBlock.prototype)
     that.name = checkType(this, "name", STRING_TYPE, false)
-    that.operatorFunc = checkType(this, "operatorFunc", exports.OperatorFunc, false)
+    that.andOperatorDef = checkType(this, "operatorDef", exports.OperatorDef, false)
+    that.orOperatorDef = checkType(this, "operatorDef", exports.OperatorDef, false)
     that.activationMethod = checkType(this, "activationMethod", exports.ActivationMethod, true)
     that.accumulationMethod = checkType(this, "accumulationMethod", exports.AccumulationMethod, false)
     that.rules = checkArrayType(this, "rules", exports.Rule, false)
