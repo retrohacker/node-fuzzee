@@ -24,8 +24,7 @@ function transform(chunk,encoding,cb) {
   //symbols is now an array of all the symbols we have thus far
   //Strip Out Comments
   symbols = removeComments(symbols)
-  console.log(symbols)
-  //parser.nextToken(symbols)
+  parser.nextToken(symbols)
   //cb(null,JSON.stringify(chunk))
 }
 
