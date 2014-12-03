@@ -16,6 +16,7 @@ stack.prototype.top = function(obj) {
 
 stack.prototype.merge = function(varName) {
   childObj = this._stack.pop()
+  childObj.validate()
   if(this.top()[varName] != null) {
     this.top().set(varName, this.top()[varName].concat(childObj))
   }

@@ -129,7 +129,9 @@ parser.prototype._run = function () {
               break
             case 'FUNCTION_BLOCK_END_TKN':
               this._tokens.shift()
-              this._returnObjects.push(this._stack.pop())
+              func = this._stack.pop()
+              func.validate()
+              this._returnObjects.push(func)
               this._currentState = states.START_STATE
               break
             default:
@@ -551,7 +553,7 @@ parser.prototype._run = function () {
                 this._throwStateError('Rules must begin with a number')
               }
               else {
-                this._stack.push(new objects.Rule({number: ruleNum.value}))
+                this._stack.push(new objects.Rule({number: parseInt(ruleNum.value)}))
                 this._currentState = states.RULE_STATE
               }
               break
@@ -707,7 +709,7 @@ parser.prototype._run = function () {
 }
 
 parser.prototype._jsMathFunctions = function(token) {
-  return token.replace('SIN', 'Math.sin')
+  return token.replace('SIN', 'Math.sin').replace('COSINE', 'Math.cos')
 }
 
 parser.prototype._recursiveExpr = function(tokens) {
@@ -841,6 +843,7 @@ parser.prototype._getVarTerm = function(v, name) {
 
 parser.prototype._checkAssign = function(contextStart, contextEnd) {
   if(this._tokens.shift() != 'ASSIGN_TKN') {
+    this._throwStateError(contextStart + ' must be assigned a ' + contextEnd)
   }
 }
 

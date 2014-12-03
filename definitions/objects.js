@@ -1,13 +1,7 @@
-var c = require("./tokens")
-var STRING_TYPE = "string",
-    NUMBER_TYPE = "number",
-    BOOL_TYPE = "boolean"
-
-function createObject(o) {
-  function F() {}
-  F.prototype = o
-  return new F()
-}
+var c = require('./tokens')
+var STRING_TYPE = 'string',
+    NUMBER_TYPE = 'number',
+    BOOL_TYPE = 'boolean'
 
 function isArray(obj) {
   return Object.prototype.toString.call(obj) === '[object Array]'
@@ -16,19 +10,19 @@ function isArray(obj) {
 function typeNames(typeArray) {
   types = []
   typeArray.forEach(function(type) {
-    if(typeof type.typeName == "undefined") {
+    if(typeof type.typeName == 'undefined') {
       types.push(type)
     }
     else {
       types.push(type.typeName)
     }
   })
-  return types.join(", ")
+  return types.join(', ')
 }
 
 function checkExists(d, k) {
   if(d[k] == null) {
-    throw "Object " + k + " missing"
+    throw 'Object ' + k + ' missing in ' + d.typeName
   }
   else {
     return d[k]
@@ -38,7 +32,7 @@ function checkExists(d, k) {
 function validateType(v, typeArray) {
   foundType = false
   typeArray.forEach(function(type, index) {
-    if(typeof(v) === type || (typeof(v) === "object" && v instanceof type)) {
+    if(typeof(v) === type || (typeof(v) === 'object' && v instanceof type)) {
       foundType = true
     }
   })
@@ -61,7 +55,7 @@ function checkType(d, k, typeArray, isOpt) {
     return d[k]
   }
   else {
-    throw "Object type " + typeof(v) + " does not match required " + typeNames(typeArray) + " in field " + k
+    throw 'Object type ' + typeof(d[k]) + ' does not match required ' + typeNames(typeArray) + ' in field ' + k + ' in ' + d.typeName
   }
 }
 
@@ -79,7 +73,7 @@ function checkArrayType(d, k, typeArray, isOpt) {
 
   d[k].forEach(function(e, index) {
     if(!validateType(e, typeArray)) {
-      throw "Object type " + typeof(e) + " does not match required " + typeNames(typeArray) + " in field " + k
+      throw 'Object type ' + typeof(e) + ' does not match required ' + typeNames(typeArray) + ' in field ' + k
     }
   })
 
@@ -99,31 +93,26 @@ var BaseObject = function(initHash) {
 exports.VarType = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.VarType.prototype)
-    that.typeName = "VarType"
-    that.type = checkType(this, "type", STRING_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'type', STRING_TYPE, false)
   }
 }
-exports.VarType.prototype.typeName = "VarType"
+exports.VarType.prototype.typeName = 'VarType'
 varTypes = {
-  INPUT: new exports.VarType({type: "INPUT"}),
-  OUTPUT: new exports.VarType({type: "OUTPUT"}),
-  LOCAL: new exports.VarType({type: "LOCAL"})
+  INPUT: new exports.VarType({type: 'INPUT'}),
+  OUTPUT: new exports.VarType({type: 'OUTPUT'}),
+  LOCAL: new exports.VarType({type: 'LOCAL'})
 }
 exports.VarTypes = varTypes
 
 exports.VarDataType = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.VarDataType.prototype)
-    that.type = checkType(this, "type", STRING_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'type', STRING_TYPE, false)
   }
 }
-exports.VarDataType.prototype.typeName = "VarDataType"
+exports.VarDataType.prototype.typeName = 'VarDataType'
 varDataTypes = {}
 varDataTypes[c.REAL_VAR_TKN] = new exports.VarDataType({type: c.REAL_VAR_TKN})
 exports.VarDataTypes = varDataTypes
@@ -131,27 +120,22 @@ exports.VarDataTypes = varDataTypes
 exports.Var = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.Var.prototype)
-    that.name = checkType(this, "name", STRING_TYPE, false)
-    that.type = checkType(this, "type", exports.VarType, false)
-    that.dataType = checkType(this, "dataType", exports.VarDataType, false)
-    that.value = checkExists(this, "value")
-    return that
+  this.validate = function() {
+    checkType(this, 'name', STRING_TYPE, false)
+    checkType(this, 'type', exports.VarType, false)
+    checkType(this, 'dataType', exports.VarDataType, false)
   }
 }
-exports.Var.prototype.typeName = "Var"
+exports.Var.prototype.typeName = 'Var'
 
 exports.VarBlock = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.Var.prototype)
-    that.vars = checkArrayType(this, "vars", exports.Var, false)
-    return that
+  this.validate = function() {
+    checkArrayType(this, 'vars', exports.Var, false)
   }
 }
-exports.VarBlock.prototype.typeName = "VarBlock"
+exports.VarBlock.prototype.typeName = 'VarBlock'
 
 /**
  * Membership Functions (all fall under MemFunc type)
@@ -159,152 +143,122 @@ exports.VarBlock.prototype.typeName = "VarBlock"
 exports.Point = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.Point.prototype)
-    that.x = checkType(this, "x", [exports.Var, NUMBER_TYPE], false)
-    that.y = checkType(this, "y", [exports.Var, NUMBER_TYPE], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'x', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'y', [exports.Var, NUMBER_TYPE], false)
   }
 }
-exports.Point.prototype.typeName = "Point"
-
-exports.MemFunc = function() {}
-exports.MemFunc.prototype.typeName = "MemFunc"
+exports.Point.prototype.typeName = 'Point'
 
 exports.Trian = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.MemFunc.prototype)
-    that.min = checkType(this, "min", [exports.Var, NUMBER_TYPE], false)
-    that.mid = checkType(this, "mid", [exports.Var, NUMBER_TYPE], false)
-    that.max = checkType(this, "max", [exports.Var, NUMBER_TYPE], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'min', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'mid', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'max', [exports.Var, NUMBER_TYPE], false)
   }
 }
+exports.Trian.prototype.typeName = 'Trian'
 
 exports.Trape = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.MemFunc.prototype)
-    that.min = checkType(this, "min", [exports.Var, NUMBER_TYPE], false)
-    that.midLow = checkType(this, "midLow", [exports.Var, NUMBER_TYPE], false)
-    that.midHigh = checkType(this, "midHigh", [exports.Var, NUMBER_TYPE], false)
-    that.max = checkType(this, "max", [exports.Var, NUMBER_TYPE], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'min', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'midLow', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'midHigh', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'max', [exports.Var, NUMBER_TYPE], false)
   }
 }
+exports.Trape.prototype.typeName = 'Trape'
 
 exports.Gauss = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.MemFunc.prototype)
-    that.mean = checkType(this, "mean", [exports.Var, NUMBER_TYPE], false)
-    that.stdev = checkType(this, "stdev", [exports.Var, NUMBER_TYPE], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'mean', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'stdev', [exports.Var, NUMBER_TYPE], false)
   }
 }
+exports.Gauss.prototype.typeName = 'Gauss'
 
 exports.Gbell = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.MemFunc.prototype)
-    that.a = checkType(this, "x", [exports.Var, NUMBER_TYPE], false)
-    that.b = checkType(this, "b", [exports.Var, NUMBER_TYPE], false)
-    that.mean = checkType(this, "mean", [exports.Var, NUMBER_TYPE], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'x', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'b', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'mean', [exports.Var, NUMBER_TYPE], false)
   }
 }
+exports.Gbell.prototype.typeName = 'Gbell'
 
 exports.Sigm = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.MemFunc.prototype)
-    that.gain = checkType(this, "gain", [exports.Var, NUMBER_TYPE], false)
-    that.center = checkType(this, "center", [exports.Var, NUMBER_TYPE], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'gain', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'center', [exports.Var, NUMBER_TYPE], false)
   }
 }
+exports.Sigm.prototype.typeName = 'Sigm'
 
 exports.Singleton = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.MemFunc.prototype)
-    that.value = checkType(this, "value", [exports.Var, NUMBER_TYPE], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'value', [exports.Var, NUMBER_TYPE], false)
   }
 }
+exports.Singleton.prototype.typeName = 'Singleton'
 
 exports.Piecewise = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.MemFunc.prototype)
-    that.points = checkArrayType(this, "points", exports.Point, false)
-    return that
+  this.validate = function() {
+    checkArrayType(this, 'points', exports.Point, false)
   }
 }
+exports.Piecewise.prototype.typeName = 'Piecewise'
 
 exports.Func = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.MemFunc.prototype)
-    that.func = checkType(this, "func", STRING_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'func', STRING_TYPE, false)
   }
 }
-
-memFuncs = {}
-memFuncs[c.TRIAN_TKN] = exports.Trian
-memFuncs[c.TRAPE_TKN] = exports.Trape
-memFuncs[c.GAUSS_TKN] = exports.Gauss
-memFuncs[c.GBELL_TKN] = exports.Gbell
-memFuncs[c.SIGM_TKN] = exports.Sigm
-memFuncs[c.SINGLETON_TKN] = exports.Singleton
-memFuncs[c.PIECEWISE_TKN] = exports.Piecewise
-memFuncs[c.FUNC_TKN] = exports.Func
-exports.MemFuncs = memFuncs
+exports.Func.prototype.typeName = 'Func'
 
 exports.Term = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.Term.prototype)
-    that.name = checkType(this, "name", STRING_TYPE, false)
-    that.func = checkType(this, "func", exports.MemFunc, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'name', STRING_TYPE, false)
+    checkType(this, 'func', [exports.Trian, exports.Trape, exports.Gauss, exports.Gbell, exports.Sigm, exports.Singleton, exports.Piecewise, exports.Func], false)
   }
 }
-exports.Term.prototype.typeName = "Term"
+exports.Term.prototype.typeName = 'Term'
 
 exports.FuzzifyBlock = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.FuzzifyBlock.prototype)
-    that.var = checkType(this, "var", exports.Var, false)
-    that.terms = checkArrayType(this, "terms", exports.Term, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'var', exports.Var, false)
+    checkArrayType(this, 'terms', exports.Term, false)
   }
 }
-exports.FuzzifyBlock.prototype.typeName = "FuzzifyBlock"
+exports.FuzzifyBlock.prototype.typeName = 'FuzzifyBlock'
 
 exports.DefuzzMethod = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.DefuzzMethod.prototype)
-    that.method = checkType(this, "method", STRING_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'method', STRING_TYPE, false)
   }
 }
-exports.DefuzzMethod.prototype.typeName = "DefuzzMethod"
+exports.DefuzzMethod.prototype.typeName = 'DefuzzMethod'
 defuzzMethods = {}
 defuzzMethods[c.COG_METHOD_TKN] = new exports.DefuzzMethod({method: c.COG_METHOD_TKN})
 defuzzMethods[c.COGS_METHOD_TKN] = new exports.DefuzzMethod({method: c.COGS_METHOD_TKN})
@@ -316,197 +270,169 @@ exports.DefuzzMethods = defuzzMethods
 exports.DefuzzDefVal = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.DefuzzDefVal.prototype)
-    that.isNC = checkType(this, "isNC", BOOL_TYPE, false)
-    that.value = checkType(this, "value", NUMBER_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'isNC', BOOL_TYPE, false)
+    checkType(this, 'value', NUMBER_TYPE, false)
   }
 }
-exports.DefuzzDefVal.prototype.typeName = "DefuzzDefVal"
+exports.DefuzzDefVal.prototype.typeName = 'DefuzzDefVal'
 
 exports.DefuzzRange = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.DefuzzRange.prototype)
-    that.min = checkType(this, "min", NUMBER_TYPE, false)
-    that.max = checkType(this, "max", NUMBER_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'min', NUMBER_TYPE, false)
+    checkType(this, 'max', NUMBER_TYPE, false)
   }
 }
-exports.DefuzzRange.prototype.typeName = "DefuzzRange"
+exports.DefuzzRange.prototype.typeName = 'DefuzzRange'
 
 exports.DefuzzifyBlock = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-  var that = createObject(exports.DefuzzifyBlock.prototype)
-    that.var = checkType(this, "var", exports.Var, false)
-    that.terms = checkArrayType(this, "terms", exports.Term, false)
-    that.defuzzMethod = checkType(this, "defuzzMethod", exports.DefuzzMethod, false)
-    that.defaultVal = checkType(this, "defaultVal", exports.DefuzzDefVal, false)
-    that.range = checkType(this, "range", exports.Range, true)
-    return that
+  this.validate = function() {
+    checkType(this, 'var', exports.Var, false)
+    checkArrayType(this, 'terms', exports.Term, false)
+    checkType(this, 'defuzzMethod', exports.DefuzzMethod, false)
+    checkType(this, 'defaultVal', exports.DefuzzDefVal, true)
+    checkType(this, 'range', exports.Range, true)
   }
 }
-exports.DefuzzifyBlock.prototype.typeName = "DefuzzifyBlock"
+exports.DefuzzifyBlock.prototype.typeName = 'DefuzzifyBlock'
 
 exports.Operator = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.Operator.prototype)
-    that.operator = checkType(this, "operator", STRING_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'operator', STRING_TYPE, false)
   }
 }
-exports.Operator.prototype.typeName = "Operator"
+exports.Operator.prototype.typeName = 'Operator'
 operators = {}
-operators[c.OPERATOR_DEF_AND_TKN] = new exports.Operator({operator: c.OPERATOR_DEF_AND_TKN})
-operators[c.OPERATOR_DEF_OR_TKN] = new exports.Operator({operator: c.OPERATOR_DEF_OR_TKN})
+operators[c.AND_TKN] = new exports.Operator({operator: c.AND_TKN})
+operators[c.OR_TKN] = new exports.Operator({operator: c.OR_TKN})
 exports.Operators = operators
 
 exports.OperatorFunc = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.OperatorFunc.prototype)
-    that.func = checkType(this, "func", STRING_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'func', STRING_TYPE, false)
   }
 }
-exports.OperatorFunc.prototype.typeName = "OperatorFunc"
+exports.OperatorFunc.prototype.typeName = 'OperatorFunc'
 operatorFuncs = {}
 operatorFuncs[c.AND_METHOD_BDIF_TKN] = new exports.OperatorFunc({func: c.AND_METHOD_BDIF_TKN})
-operatorFuncs[c.AND_METHOD_MIN_TKN] = new exports.OperatorFunc({func: c.AND_METHOD_MIN_TKN})
-operatorFuncs[c.AND_METHOD_PROF_TKN] = new exports.OperatorFunc({func: c.AND_METHOD_PROF_TKN})
-operatorFuncs[c.OR_METHOD_MAX_TKN] = new exports.OperatorFunc({func: c.OR_METHOD_MAX_TKN})
+operatorFuncs[c.MIN_TKN] = new exports.OperatorFunc({func: c.MIN_TKN})
+operatorFuncs[c.PROD_TKN] = new exports.OperatorFunc({func: c.PROD_TKN})
+operatorFuncs[c.MAX_TKN] = new exports.OperatorFunc({func: c.MAX_TKN})
 operatorFuncs[c.OR_METHOD_ASUM_TKN] = new exports.OperatorFunc({func: c.OR_METHOD_ASUM_TKN})
-operatorFuncs[c.OR_METHOD_BSUM_TKN] = new exports.OperatorFunc({func: c.OR_METHOD_BSUM_TKN})
+operatorFuncs[c.BSUM_TKN] = new exports.OperatorFunc({func: c.BSUM_TKN})
 exports.OperatorFuncs = operatorFuncs
 
 exports.OperatorDef = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.OperatorFunc.prototype)
-    that.operator = checkType(this, "operator", exports.Operator, false)
-    that.func = checkType(this, "func", exports.OperatorFunc, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'operator', exports.Operator, false)
+    checkType(this, 'func', exports.OperatorFunc, false)
   }
 }
-exports.OperatorDef.prototype.typeName = "OperatorDef"
+exports.OperatorDef.prototype.typeName = 'OperatorDef'
 
 exports.ActivationMethod = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.ActivationMethod.prototype)
-    that.method = checkType(this, "method", STRING_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'method', STRING_TYPE, false)
   }
 }
-exports.ActivationMethod.prototype.typeName = "ActivationMethod"
+exports.ActivationMethod.prototype.typeName = 'ActivationMethod'
 activationMethods = {}
-activationMethods[c.ACT_METHOD_MIN_TKN] = new exports.ActivationMethod({method: c.ACT_METHOD_MIN_TKN})
-activationMethods[c.ACT_METHOD_PROD_TKN] = new exports.ActivationMethod({method: c.ACT_METHOD_PROD_TKN})
+activationMethods[c.MIN_TKN] = new exports.ActivationMethod({method: c.MIN_TKN})
+activationMethods[c.PROD_TKN] = new exports.ActivationMethod({method: c.PROD_TKN})
 exports.ActivationMethods = activationMethods
 
 exports.AccumulationMethod = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.AccumulationMethod.prototype)
-    that.method = checkType(this, "method", STRING_TYPE, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'method', STRING_TYPE, false)
   }
 }
-exports.AccumulationMethod.prototype.typeName = "AccumulationMethod"
+exports.AccumulationMethod.prototype.typeName = 'AccumulationMethod'
 accumulationMethods = {}
-accumulationMethods[c.ACCUM_METHOD_MAX_TKN] = new exports.AccumulationMethod({method: c.ACCUM_METHOD_MAX_TKN})
-accumulationMethods[c.ACCUM_METHOD_BSUM_TKN] = new exports.AccumulationMethod({method: c.ACCUM_METHOD_BSUM_TKN})
+accumulationMethods[c.MAX_TKN] = new exports.AccumulationMethod({method: c.MAX_TKN})
+accumulationMethods[c.BSUM] = new exports.AccumulationMethod({method: c.BSUM})
 accumulationMethods[c.ACCUM_METHOD_NSUM_TKN] = new exports.AccumulationMethod({method: c.ACCUM_METHOD_NSUM_TKN})
 exports.AccumulationMethods = accumulationMethods
 
 exports.Assertion = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.Assertion.prototype)
-    that.var = checkType(this, "var", exports.Var, false)
-    that.value = checkType(this, "var", exports.Term, false)
-    that.not = checkType(this, "not", BOOL_TYPE, true)
-    return that
+  this.validate = function() {
+    checkType(this, 'var', exports.Var, false)
+    checkType(this, 'var', exports.Term, false)
+    checkType(this, 'not', BOOL_TYPE, true)
   }
 }
-exports.Assertion.prototype.typeName = "Assertion"
+exports.Assertion.prototype.typeName = 'Assertion'
 
 exports.Expression = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.Expression.prototype)
-    that.operator = checkType(this, "operator", exports.Operator, false)
-    that.firstHalf = checkType(this, "firstHalf", [exports.Assertion, exports.Expression], false)
-    that.secondHalf = checkType(this, "secondHalf", [exports.Assertion, exports.Expression], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'operator', exports.Operator, false)
+    checkType(this, 'firstHalf', [exports.Assertion, exports.Expression], false)
+    checkType(this, 'secondHalf', [exports.Assertion, exports.Expression], false)
   }
 }
-exports.Expression.prototype.typeName = "Expression"
+exports.Expression.prototype.typeName = 'Expression'
 
 exports.WithCond = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.WithCond.prototype)
-    that.value = checkType(this, "value", [exports.Var, NUMBER_TYPE], false)
-    return that
+  this.validate = function() {
+    checkType(this, 'value', [exports.Var, NUMBER_TYPE], false)
   }
 }
-exports.WithCond.prototype.typeName = "WithCond"
+exports.WithCond.prototype.typeName = 'WithCond'
 
 exports.Rule = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.Rule.prototype)
-    that.number = checkType(this, "number", NUMBER_TYPE, false)
-    that.ifCond = checkType(this, "ifCond", [exports.Assertion, exports.Expression], false)
-    that.thenCond = checkType(this, "thenCond", [exports.Assertion, exports.Expression], false)
-    that.withCond = checkType(this, "withCond", exports.WithCond, true)
-    return that
+  this.validate = function() {
+    checkType(this, 'number', NUMBER_TYPE, false)
+    checkType(this, 'ifCond', [exports.Assertion, exports.Expression], false)
+    checkType(this, 'thenCond', [exports.Assertion, exports.Expression], false)
+    checkType(this, 'withCond', exports.WithCond, true)
   }
 }
-exports.Rule.prototype.typeName = "Rule"
+exports.Rule.prototype.typeName = 'Rule'
 
 exports.RuleBlock = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.RuleBlock.prototype)
-    that.name = checkType(this, "name", STRING_TYPE, false)
-    that.andOperatorDef = checkType(this, "operatorDef", exports.OperatorDef, false)
-    that.orOperatorDef = checkType(this, "operatorDef", exports.OperatorDef, false)
-    that.activationMethod = checkType(this, "activationMethod", exports.ActivationMethod, true)
-    that.accumulationMethod = checkType(this, "accumulationMethod", exports.AccumulationMethod, false)
-    that.rules = checkArrayType(this, "rules", exports.Rule, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'name', STRING_TYPE, true)
+    checkType(this, 'andOperatorDef', exports.OperatorDef, true)
+    checkType(this, 'orOperatorDef', exports.OperatorDef, true)
+    checkType(this, 'activationMethod', exports.ActivationMethod, true)
+    checkType(this, 'accumulationMethod', exports.AccumulationMethod, true)
+    checkArrayType(this, 'rules', exports.Rule, false)
   }
 }
-exports.RuleBlock.prototype.typeName = "RuleBlock"
+exports.RuleBlock.prototype.typeName = 'RuleBlock'
 
 exports.FunctionBlock = function() {
   BaseObject.apply(this, arguments)
 
-  this.get = function() {
-    var that = createObject(exports.FunctionBlock.prototype)
-    that.name = checkType(this, "name", STRING_TYPE, false)
-    that.varBlocks = checkArrayType(this, "varBlocks", exports.VarBlock, false)
-    that.fuzzifyBlocks = checkArrayType(this, "fuzzifyBlocks", exports.FuzzifyBlock, false)
-    that.defuzzifyBlocks = checkArrayType(this, "defuzzifyBlocks", exports.DefuzzifyBlock, false)
-    that.ruleBlocks = checkArrayType(this, "ruleBlocks", exports.RuleBlock, false)
-    return that
+  this.validate = function() {
+    checkType(this, 'name', STRING_TYPE, false)
+    checkArrayType(this, 'varBlocks', exports.VarBlock, false)
+    checkArrayType(this, 'fuzzifyBlocks', exports.FuzzifyBlock, false)
+    checkArrayType(this, 'defuzzifyBlocks', exports.DefuzzifyBlock, false)
+    checkArrayType(this, 'ruleBlocks', exports.RuleBlock, false)
   }
 }
-exports.FunctionBlock.prototype.typeName = "FunctionBlock"
+exports.FunctionBlock.prototype.typeName = 'FunctionBlock'
