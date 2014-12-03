@@ -2,11 +2,12 @@ var Transform = require('stream').Transform
 var util = require('util')
 var states = require('./definitions/states')
 var objects = require('./definitions/objects')
+var Stack = require('./stack')
 
 var parser = module.exports = function constructor() {
   Transform.call(this, {objectMode: true})
   this._currentState = states.START_STATE
-  this._stack = []
+  this._stack = new Stack()
   this._tokens = []
   this._vars = []
   this._neededTokens = 0
@@ -50,8 +51,8 @@ parser.prototype._run = function () {
               this._throwStateError('Function declaration must be followed by name')
             }
             else {
-              this._stackPush(new objects.FunctionBlock())
-              this._topStackObject().set('name', funcName.value)
+              this._stack.push(new objects.FunctionBlock())
+              this._stack.top().set('name', funcName.value)
               this._currentState = states.FUNCTION_STATE
             }
           }
@@ -66,17 +67,17 @@ parser.prototype._run = function () {
           switch(this._tokens[0]) {
             case 'VAR_INPUT_BLOCK_START_TKN':
               this._tokens.shift()
-              this._stackPush(new objects.VarBlock())
+              this._stack.push(new objects.VarBlock())
               this._currentState = states.INVARS_STATE
               break
             case 'VAR_OUTPUT_BLOCK_START_TKN':
               this._tokens.shift()
-              this._stackPush(new objects.VarBlock())
+              this._stack.push(new objects.VarBlock())
               this._currentState = states.OUTVARS_STATE
               break
             case 'VAR_BLOCK_START_TKN':
               this._tokens.shift()
-              this._stackPush(new objects.VarBlock())
+              this._stack.push(new objects.VarBlock())
               this._currentState = states.OTHERVARS_STATE
               break
             case 'FUZZIFY_BLOCK_START_TKN':
@@ -90,7 +91,7 @@ parser.prototype._run = function () {
 
                 switch(block) {
                   case 'FUZZIFY_BLOCK_START_TKN':
-                    this._stackPush(new objects.FuzzifyBlock())
+                    this._stack.push(new objects.FuzzifyBlock())
                     this._currentState = states.FUZZ_STATE
 
                     varName = this._tokens.shift()
@@ -98,12 +99,12 @@ parser.prototype._run = function () {
                       this._throwStateError('Fuzzify block declaration must be followed by name')
                     }
                     else {
-                      this._topStackObject().set('var', this._getVar(varName.value))
+                      this._stack.top().set('var', this._getVar(varName.value))
                     }
                     break
 
                   case 'DEFUZZIFY_BLOCK_START_TKN':
-                    this._stackPush(new objects.DefuzzifyBlock())
+                    this._stack.push(new objects.DefuzzifyBlock())
                     this._currentState = states.DEFUZZ_STATE
 
                     varName = this._tokens.shift()
@@ -111,16 +112,16 @@ parser.prototype._run = function () {
                       this._throwStateError('Defuzzify block declaration must be followed by name')
                     }
                     else {
-                      this._topStackObject().set('var', this._getVar(varName.value))
+                      this._stack.top().set('var', this._getVar(varName.value))
                     }
                     break
 
                   case 'RULEBLOCK_BLOCK_START_TKN':
-                    this._stackPush(new objects.RuleBlock())
+                    this._stack.push(new objects.RuleBlock())
                     this._currentState = states.RULE_BLOCK_STATE
 
                     if(typeof this._tokens[0] == 'object') {
-                      this._topStackObject().set('name', this._tokens.shift().value)
+                      this._stack.top().set('name', this._tokens.shift().value)
                     }
                     break
                 }
@@ -142,20 +143,20 @@ parser.prototype._run = function () {
         }
         else if(this._tokens[0] == 'VAR_BLOCK_END_TKN') {
           this._tokens.shift()
-          this._mergeStackArrayObject('varBlocks')
+          this._stack.merge('varBlocks')
           this._currentState = states.FUNCTION_STATE
         }
         else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
           return 0
         }
         else {
-          this._stackPush(new objects.Var({type: objects.VarTypes.INPUT}))
+          this._stack.push(new objects.Var({type: objects.VarTypes.INPUT}))
           varName = this._tokens.shift()
           if(typeof varName != 'object') {
             this._throwStateError('Var line must begin with a variable name')
           }
           else {
-            this._topStackObject().set('name', varName.value)
+            this._stack.top().set('name', varName.value)
           }
           this._currentState = states.VAR_STATE
         }
@@ -167,20 +168,20 @@ parser.prototype._run = function () {
         }
         else if(this._tokens[0] == 'VAR_BLOCK_END_TKN') {
           this._tokens.shift()
-          this._mergeStackArrayObject('varBlocks')
+          this._stack.merge('varBlocks')
           this._currentState = states.FUNCTION_STATE
         }
         else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
           return 0
         }
         else {
-          this._stackPush(new objects.Var({type: objects.VarTypes.OUTPUT}))
+          this._stack.push(new objects.Var({type: objects.VarTypes.OUTPUT}))
           varName = this._tokens.shift()
           if(typeof varName != 'object') {
             this._throwStateError('Var line must begin with a variable name')
           }
           else {
-            this._topStackObject().set('name', varName.value)
+            this._stack.top().set('name', varName.value)
           }
           this._currentState = states.VAR_STATE
         }
@@ -192,20 +193,20 @@ parser.prototype._run = function () {
         }
         else if(this._tokens[0] == 'VAR_BLOCK_END_TKN') {
           this._tokens.shift()
-          this._mergeStackArrayObject('varBlocks')
+          this._stack.merge('varBlocks')
           this._currentState = states.FUNCTION_STATE
         }
         else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
           return 0
         }
         else {
-          this._stackPush(new objects.Var({type: objects.VarTypes.LOCAL}))
+          this._stack.push(new objects.Var({type: objects.VarTypes.LOCAL}))
           varName = this._tokens.shift()
           if(typeof varName != 'object') {
             this._throwStateError('Var line must begin with a variable name')
           }
           else {
-            this._topStackObject().set('name', varName.value)
+            this._stack.top().set('name', varName.value)
           }
           this._currentState = states.VAR_STATE
         }
@@ -217,7 +218,7 @@ parser.prototype._run = function () {
         varType = this._tokens.shift()
 
         if(varType == 'REAL_VAR_TKN') {
-          this._topStackObject().set('dataType', objects.VarDataTypes.REAL)
+          this._stack.top().set('dataType', objects.VarDataTypes.REAL)
         }
         else {
           this._throwStateError('Unknown var data type: ' + varType)
@@ -225,11 +226,11 @@ parser.prototype._run = function () {
 
         this._checkSemicolon('Var definitions')
 
-        this._addVar(this._topStackObject().name, this._topStackObject())
+        this._addVar(this._stack.top().name, this._stack.top())
 
-        type = this._topStackObject().type
+        type = this._stack.top().type
 
-        this._mergeStackArrayObject('vars')
+        this._stack.merge('vars')
 
         switch(type) {
           case objects.VarTypes.INPUT:
@@ -251,12 +252,12 @@ parser.prototype._run = function () {
         else {
           switch(this._tokens.shift()) {
             case 'FUZZIFY_BLOCK_END_TKN':
-              this._mergeStackArrayObject('fuzzifyBlocks')
+              this._stack.merge('fuzzifyBlocks')
               this._currentState = states.FUNCTION_STATE
               break
 
             case 'TERM_TKN':
-              this._stackPush(new objects.Term())
+              this._stack.push(new objects.Term())
               this._currentState = states.TERM_STATE
               break
 
@@ -274,13 +275,13 @@ parser.prototype._run = function () {
           switch(this._tokens[0]) {
             case 'DEFUZZIFY_BLOCK_END_TKN':
               this._tokens.shift()
-              this._mergeStackArrayObject('defuzzifyBlocks')
+              this._stack.merge('defuzzifyBlocks')
               this._currentState = states.FUNCTION_STATE
               break
 
             case 'TERM_TKN':
               this._tokens.shift()
-              this._stackPush(new objects.Term())
+              this._stack.push(new objects.Term())
               this._currentState = states.TERM_STATE
               break
 
@@ -293,23 +294,23 @@ parser.prototype._run = function () {
 
               switch(this._tokens.shift()) {
                 case  'COG_METHOD_TKN':
-                  this._topStackObject().set('defuzzMethod', objects.DefuzzMethods.COG)
+                  this._stack.top().set('defuzzMethod', objects.DefuzzMethods.COG)
                   break
 
                 case 'COGS_METHOD_TKN':
-                  this._topStackObject().set('defuzzMethod', objects.DefuzzMethods.COGS)
+                  this._stack.top().set('defuzzMethod', objects.DefuzzMethods.COGS)
                   break
 
                 case 'COA_METHOD_TKN':
-                  this._topStackObject().set('defuzzMethod', objects.DefuzzMethods.COA)
+                  this._stack.top().set('defuzzMethod', objects.DefuzzMethods.COA)
                   break
 
                 case 'LM_METHOD_TKN':
-                  this._topStackObject().set('defuzzMethod', objects.DefuzzMethods.LM)
+                  this._stack.top().set('defuzzMethod', objects.DefuzzMethods.LM)
                   break
 
                 case 'RM_METHOD_TKN':
-                  this._topStackObject().set('defuzzMethod', objects.DefuzzMethods.RM)
+                  this._stack.top().set('defuzzMethod', objects.DefuzzMethods.RM)
                   break
 
                 default:
@@ -328,10 +329,10 @@ parser.prototype._run = function () {
 
               def = this._tokens.shift()
               if(typeof def == 'object') {
-                this._topStackObject().set('defaultVal', new objects.DefuzzDefVal({value: def.value}))
+                this._stack.top().set('defaultVal', new objects.DefuzzDefVal({value: def.value}))
               }
               else if(def == 'DEFAULT_NC_TKN') {
-                this._topStackObject().set('defaultVal', new objects.DefuzzDefVal({isNC: true}))
+                this._stack.top().set('defaultVal', new objects.DefuzzDefVal({isNC: true}))
               }
               else {
                 this._throwStateError('Unknown default defuzzification value')
@@ -367,7 +368,7 @@ parser.prototype._run = function () {
 
               this._checkSemicolon('Defuzzification range')
 
-              this._topStackObject().set('range', new objects.DefuzzRange({min: min.value, max: max.value}))
+              this._stack.top().set('range', new objects.DefuzzRange({min: min.value, max: max.value}))
               break
 
             default:
@@ -387,7 +388,7 @@ parser.prototype._run = function () {
             this._throwStateError('Term name must be provided')
           }
           else {
-            this._topStackObject().set('name', termName.value)
+            this._stack.top().set('name', termName.value)
           }
 
           this._checkAssign('Term', 'function')
@@ -399,7 +400,7 @@ parser.prototype._run = function () {
               mid = this._getNumOrVar(this._tokens.shift(), 'Trian parameters')
               max = this._getNumOrVar(this._tokens.shift(), 'Trian parameters')
 
-              this._topStackObject().set('func', new objects.Trian({min: min, mid: mid, max: max}))
+              this._stack.top().set('func', new objects.Trian({min: min, mid: mid, max: max}))
 
               this._checkSemicolon('Term definitions')
               break
@@ -411,7 +412,7 @@ parser.prototype._run = function () {
               midHigh = this._getNumOrVar(this._tokens.shift(), 'Trape parameters')
               max = this._getNumOrVar(this._tokens.shift(), 'Trape parameters')
 
-              this._topStackObject().set('func', new objects.Trape({min: min, midLow: midLow, midHigh: midHigh, max: max}))
+              this._stack.top().set('func', new objects.Trape({min: min, midLow: midLow, midHigh: midHigh, max: max}))
 
               this._checkSemicolon('Term definitions')
               break
@@ -421,7 +422,7 @@ parser.prototype._run = function () {
               mean = this._getNumOrVar(this._tokens.shift(), 'Gauss parameters')
               stdev = this._getNumOrVar(this._tokens.shift(), 'Gauss parameters')
 
-              this._topStackObject().set('func', new objects.Gauss({mean: mean, stdev: stdev}))
+              this._stack.top().set('func', new objects.Gauss({mean: mean, stdev: stdev}))
 
               this._checkSemicolon('Term definitions')
               break
@@ -432,7 +433,7 @@ parser.prototype._run = function () {
               b = this._getNumOrVar(this._tokens.shift(), 'Gbell parameters')
               mean = this._getNumOrVar(this._tokens.shift(), 'Gbell parameters')
 
-              this._topStackObject().set('func', new objects.Gbell({a: a, b: b, mean: mean}))
+              this._stack.top().set('func', new objects.Gbell({a: a, b: b, mean: mean}))
 
               this._checkSemicolon('Term definitions')
               break
@@ -442,7 +443,7 @@ parser.prototype._run = function () {
               gain = this._getNumOrVar(this._tokens.shift(), 'Sigm parameters')
               center = this._getNumOrVar(this._tokens.shift(), 'Sigm parameters')
 
-              this._topStackObject().set('func', new objects.Sigm({gain: gain, center: center}))
+              this._stack.top().set('func', new objects.Sigm({gain: gain, center: center}))
 
               this._checkSemicolon('Term definitions')
               break
@@ -468,7 +469,7 @@ parser.prototype._run = function () {
                 piecewise.set('func', piecewise.points.push(new objects.Point({x: x, y: y})))
               }
 
-              this._topStackObject().set('func', piecewise)
+              this._stack.top().set('func', piecewise)
 
               this._checkSemicolon('Term definitions')
               break
@@ -495,7 +496,7 @@ parser.prototype._run = function () {
                 }
               }
 
-              this._topStackObject().set('func', new objects.Func({func: funString}))
+              this._stack.top().set('func', new objects.Func({func: funString}))
 
               this._checkSemicolon('Term definitions')
               break
@@ -504,7 +505,7 @@ parser.prototype._run = function () {
               if(typeof this._tokens[0] == 'object') {
                 val = this._getNumOrVar(this._tokens.shift(), 'Singleton parameters')
 
-                this._topStackObject().set('func', new objects.Singleton({value: val}))
+                this._stack.top().set('func', new objects.Singleton({value: val}))
 
                 this._checkSemicolon('Term definitions')
               }
@@ -513,12 +514,12 @@ parser.prototype._run = function () {
               }
           }
 
-          this._mergeStackArrayObject('terms')
+          this._stack.merge('terms')
 
           // Set terms to appropriate var for checking in rule phase
-          this._topStackObject().var.set('terms', this._topStackObject().terms)
+          this._stack.top().var.set('terms', this._stack.top().terms)
 
-          if(this._topStackObject() instanceof objects.FuzzifyBlock) {
+          if(this._stack.top() instanceof objects.FuzzifyBlock) {
             this._currentState = states.FUZZ_STATE
           }
           else {
@@ -533,7 +534,7 @@ parser.prototype._run = function () {
         }
         else if(this._tokens[0] == 'RULEBLOCK_BLOCK_END_TKN') {
           this._tokens.shift()
-          this._mergeStackArrayObject('ruleBlocks')
+          this._stack.merge('ruleBlocks')
           this._currentState = states.FUNCTION_STATE
         }
         else if(this._tokens.indexOf('SEMICOLON_TKN') == -1) {
@@ -550,7 +551,7 @@ parser.prototype._run = function () {
                 this._throwStateError('Rules must begin with a number')
               }
               else {
-                this._stackPush(new objects.Rule({number: ruleNum.value}))
+                this._stack.push(new objects.Rule({number: ruleNum.value}))
                 this._currentState = states.RULE_STATE
               }
               break
@@ -578,8 +579,8 @@ parser.prototype._run = function () {
                   this._throwStateError('Unknown AND operator definition in ruleblock')
               }
 
-              this._topStackObject().set('andOperatorDef', andDef)
-              this._topStackObject().set('orOperatorDef', andDef)
+              this._stack.top().set('andOperatorDef', andDef)
+              this._stack.top().set('orOperatorDef', andDef)
 
               this._checkSemicolon('Ruleblock operator definitions')
               break
@@ -607,8 +608,8 @@ parser.prototype._run = function () {
                   this._throwStateError('Unknown OR operator definition in ruleblock')
               }
 
-              this._topStackObject().set('andOperatorDef', andDef)
-              this._topStackObject().set('orOperatorDef', andDef)
+              this._stack.top().set('andOperatorDef', andDef)
+              this._stack.top().set('orOperatorDef', andDef)
 
               this._checkSemicolon('Ruleblock operator definitions')
               break
@@ -618,11 +619,11 @@ parser.prototype._run = function () {
 
               switch(this._tokens.shift()) {
                 case 'PROD_TKN':
-                  this._topStackObject().set('activationMethod', objects.ActivationMethods.PROD)
+                  this._stack.top().set('activationMethod', objects.ActivationMethods.PROD)
                   break
 
                 case 'MIN_TKN':
-                  this._topStackObject().set('activationMethod', objects.ActivationMethods.MIN)
+                  this._stack.top().set('activationMethod', objects.ActivationMethods.MIN)
                   break
 
                 default:
@@ -637,15 +638,15 @@ parser.prototype._run = function () {
 
               switch(this._tokens.shift()) {
                 case 'MAX_TKN':
-                  this._topStackObject().set('accumulationMethod', objects.AccumulationMethods.MAX)
+                  this._stack.top().set('accumulationMethod', objects.AccumulationMethods.MAX)
                   break
 
                 case 'BSUM_TKN':
-                  this._topStackObject().set('accumulationMethod', objects.AccumulationMethods.BSUM)
+                  this._stack.top().set('accumulationMethod', objects.AccumulationMethods.BSUM)
                   break
 
                 case 'ACCUM_METHOD_NSUM_TKN':
-                  this._topStackObject().set('accumulationMethod', objects.AccumulationMethods.NSUM)
+                  this._stack.top().set('accumulationMethod', objects.AccumulationMethods.NSUM)
                   break
 
                 default:
@@ -678,7 +679,7 @@ parser.prototype._run = function () {
           }
         }
 
-        this._topStackObject().set('ifCond', this._recursiveExpr(subTokens))
+        this._stack.top().set('ifCond', this._recursiveExpr(subTokens))
 
         subTokens = []
         this._tokens.shift()
@@ -686,18 +687,18 @@ parser.prototype._run = function () {
           subTokens.push(this._tokens.shift())
         }
 
-        this._topStackObject().set('thenCond', this._recursiveExpr(subTokens))
+        this._stack.top().set('thenCond', this._recursiveExpr(subTokens))
 
         if(this._tokens[0] == 'WITH_CONDITION_TKN') {
           this._tokens.shift()
 
           w = this._getNumOrVar(this._tokens.shift(), 'With conditions')
-          this._topStackObject().set('withCond', new objects.WithCond({value: w}))
+          this._stack.top().set('withCond', new objects.WithCond({value: w}))
         }
 
         this._checkSemicolon('Rule numbers and definitions')
 
-        this._mergeStackArrayObject('rules')
+        this._stack.merge('rules')
 
         this._currentState = states.RULE_BLOCK_STATE
         break
@@ -721,7 +722,7 @@ parser.prototype._recursiveExpr = function(tokens) {
     assert.set('var', v)
 
     if(tokens[termTkn] == 'NOT_LOGIC_TKN') {
-      assert.set('not', true)
+      assert.set('not')
       termTkn++
     }
 
@@ -865,29 +866,6 @@ parser.prototype._throwVarError = function(name) {
 
 parser.prototype._throwStateError = function(msg) {
   throw 'State error: ' + msg
-}
-
-parser.prototype._stackPush = function(obj) {
-  this._stack.push(obj)
-}
-
-parser.prototype._topStackObject = function() {
-  return this._stack[this._stack.length - 1]
-}
-
-parser.prototype._mergeStackObject = function(varName) {
-  childObj = this._stack.pop()
-  this._topStackObject().set(varName, childObj)
-}
-
-parser.prototype._mergeStackArrayObject = function(varName) {
-  childObj = this._stack.pop()
-  if(this._topStackObject()[varName] != null) {
-    this._topStackObject().set(varName, this._topStackObject()[varName].concat(childObj))
-  }
-  else {
-    this._topStackObject().set(varName, [childObj])
-  }
 }
 
 module.exports = parser
