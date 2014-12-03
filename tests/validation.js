@@ -1,4 +1,4 @@
-var fuzzee = require('../index.js')
+var fuzzee = require('../index')
 var glob = require('glob')
 var fs = require('fs')
 var async = require('async')

@@ -1,8 +1,10 @@
 var Transform = require('stream').Transform
 var util = require('util')
-var states = require('./definitions/states')
-var objects = require('./definitions/generator')
-var Stack = require('./stack')
+
+var states = require('../constants/states')
+var objects = require('./generator')
+
+var Stack = require('../objects/stack')
 
 var parser = module.exports = function constructor() {
   Transform.call(this, {objectMode: true})
@@ -16,12 +18,7 @@ var parser = module.exports = function constructor() {
 util.inherits(parser, Transform);
 
 parser.prototype._transform = function(chunk, encoding, cb) {
-  tkn = chunk.toString()
-  try {
-    this._tokens = this._tokens.concat(JSON.parse(tkn))
-  } catch (e) {
-    this._tokens = this._tokens.concat(tkn)
-  }
+  this._tokens = this._tokens.concat(chunk)
 
   if(this._tokens.length >= this._neededTokens) {
     this._neededTokens = this._run()

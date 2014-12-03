@@ -1,4 +1,4 @@
-var obj = require('./objects.js')
+var obj = require('../objects/objects')
 
 // We are simply extending objects
 module.exports = obj
