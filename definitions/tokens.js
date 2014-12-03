@@ -155,4 +155,3 @@ var TOKENS = {
   NOT_LOGIC_TKN: NOT_LOGIC_TKN
 }
 module.exports = TOKENS
-module.exports.terminators = terminators
