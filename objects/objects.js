@@ -1,4 +1,4 @@
-var c = require('../constants/tokens')
+var c = require('../constants/tokens').tokens
 var STRING_TYPE = 'string',
     NUMBER_TYPE = 'number',
     BOOL_TYPE = 'boolean'
