@@ -841,10 +841,6 @@ parser.prototype._getVarTerm = function(v, name) {
 
 parser.prototype._checkAssign = function(contextStart, contextEnd) {
   if(this._tokens.shift() != 'ASSIGN_TKN') {
-    // @TODO: Strip out this if condition after lexer bug fixed
-    if(this._tokens.shift() != 'terminators') {
-      this._throwStateError(contextStart + ' must be assigned a ' + contextEnd)
-    }
   }
 }
 
