@@ -431,8 +431,8 @@ exports.FunctionBlock = function() {
     checkType(this, 'name', STRING_TYPE, false)
     checkArrayType(this, 'varBlocks', exports.VarBlock, false)
     checkArrayType(this, 'fuzzifyBlocks', exports.FuzzifyBlock, false)
-    checkArrayType(this, 'defuzzifyBlocks', exports.DefuzzifyBlock, false)
-    checkArrayType(this, 'ruleBlocks', exports.RuleBlock, false)
+    checkArrayType(this, 'defuzzifyBlocks', exports.DefuzzifyBlock, true)
+    checkArrayType(this, 'ruleBlocks', exports.RuleBlock, true)
   }
 }
 exports.FunctionBlock.prototype.typeName = 'FunctionBlock'
