@@ -17,6 +17,7 @@ util.inherits(fuzzee, Transform);
 fuzzee.prototype._transform = transform
 
 function transform(chunk,encoding,cb) {
+  var self = this;
   this.s += chunk
   //Split around terminators
   var symbols = this.s.replace(new RegExp("\\(|\\)|:=|:|,|;|[\f\n\r]+",'g'),' $& ').split(/[ \t\v]+/)
@@ -29,10 +30,9 @@ function transform(chunk,encoding,cb) {
     if(typeof tkn == 'object') {
       tkn = JSON.stringify(tkn)
     }
-    parser.write(tkn)
+    self.push(tkn)
   })
-  // parser.nextToken(symbols)
-  //cb(null,JSON.stringify(chunk))
+  //cb()
 }
 
 /**
