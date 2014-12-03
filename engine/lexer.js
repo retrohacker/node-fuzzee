@@ -5,17 +5,17 @@ var tokens = require('../constants/tokens')
 
 var lexer = module.exports = function constructor(fsl) {
   Transform.call(this, {objectMode: true})
-  this._string = ''
 }
 util.inherits(lexer, Transform);
 
 lexer.prototype._transform = function(chunk, encoding, cb) {
-  this._string += chunk
-
   // Split around terminators
-  var symbols = this._string.replace(new RegExp("\\(|\\)|:=|:|,|;|[\f\n\r]+",'g'),' $& ').split(/[ \t\v]+/)
+  var symbols = chunk.toString().replace(new RegExp("\\(|\\)|:=|:|,|;|[\f\n\r]+",'g'),' $& ').split(/[ \t\v]+/)
 
-  this._string = symbols.pop()
+  // Remove last symbol if it's empty
+  if(symbols[symbols.length - 1] == '') {
+    symbols.pop()
+  }
 
   // Tokenize symbols
   symbols = getTokens(symbols)
