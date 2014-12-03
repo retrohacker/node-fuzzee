@@ -93,18 +93,6 @@ var MULTILINE_COMMENT_END_TKN  = /^\*+\/$/ // */
 var SINGLELINE_COMMENT_START_TKN   = "//"
 var NEWLINE_TKN                = /[\f\n\r]+/g
 
-var terminators = new RegExp("["+(([
-  LEFT_PAREN_TKN,
-  RIGHT_PAREN_TKN,
-  ASSIGN_TKN,
-  COLON_TKN,
-  COMMA_TKN,
-  SEMICOLON_TKN,
-].join(''))).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
-  +"]"
-  + "|" +NEWLINE_TKN.source
-,'g')
-
 var TOKENS = {
   MULTILINE_COMMENT_START_TKN: MULTILINE_COMMENT_START_TKN,
   MULTILINE_COMMENT_END_TKN: MULTILINE_COMMENT_END_TKN,

@@ -18,7 +18,8 @@ fuzzee.prototype._transform = transform
 
 function transform(chunk,encoding,cb) {
   this.s += chunk
-  var symbols = this.s.replace(tokens.terminators,' $& ').split(/[ \t\v]+/)
+  //Split around terminators
+  var symbols = this.s.replace(new RegExp("\\(|\\)|:=|:|,|;|[\f\n\r]+",'g'),' $& ').split(/[ \t\v]+/)
   this.s = symbols.pop()
   symbols = getTokens(symbols)
   //symbols is now an array of all the symbols we have thus far
