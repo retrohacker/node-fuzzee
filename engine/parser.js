@@ -129,6 +129,8 @@ parser.prototype._run = function () {
               func = this._stack.pop()
               func.validate()
               this._returnObjects.push(func)
+              this._vars = []
+              this._neededTokens = 0
               this._currentState = states.START_STATE
               break
             default:
