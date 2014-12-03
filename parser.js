@@ -1,7 +1,7 @@
 var Transform = require('stream').Transform
 var util = require('util')
 var states = require('./definitions/states')
-var objects = require('./definitions/objects')
+var objects = require('./definitions/generator')
 var Stack = require('./stack')
 
 var parser = module.exports = function constructor() {
@@ -31,7 +31,7 @@ parser.prototype._transform = function(chunk, encoding, cb) {
   while(this._returnObjects.length > 0) {
     retObj.push(this._returnObjects.shift())
   }
-  cb(null, retObj)
+  cb(null, retObj.toString())
 }
 
 parser.prototype._run = function () {

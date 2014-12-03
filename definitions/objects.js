@@ -106,7 +106,7 @@ exports.VarType = function() {
     return that
   }
 }
-exports.VarType.typeName = "VarType"
+exports.VarType.prototype.typeName = "VarType"
 varTypes = {
   INPUT: new exports.VarType({type: "INPUT"}),
   OUTPUT: new exports.VarType({type: "OUTPUT"}),
@@ -123,7 +123,7 @@ exports.VarDataType = function() {
     return that
   }
 }
-exports.VarDataType.typeName = "VarDataType"
+exports.VarDataType.prototype.typeName = "VarDataType"
 varDataTypes = {}
 varDataTypes[c.REAL_VAR_TKN] = new exports.VarDataType({type: c.REAL_VAR_TKN})
 exports.VarDataTypes = varDataTypes
@@ -140,7 +140,7 @@ exports.Var = function() {
     return that
   }
 }
-exports.Var.typeName = "Var"
+exports.Var.prototype.typeName = "Var"
 
 exports.VarBlock = function() {
   BaseObject.apply(this, arguments)
@@ -151,7 +151,7 @@ exports.VarBlock = function() {
     return that
   }
 }
-exports.VarBlock.typeName = "VarBlock"
+exports.VarBlock.prototype.typeName = "VarBlock"
 
 /**
  * Membership Functions (all fall under MemFunc type)
@@ -166,10 +166,10 @@ exports.Point = function() {
     return that
   }
 }
-exports.Point.typeName = "Point"
+exports.Point.prototype.typeName = "Point"
 
 exports.MemFunc = function() {}
-exports.MemFunc.typeName = "MemFunc"
+exports.MemFunc.prototype.typeName = "MemFunc"
 
 exports.Trian = function() {
   BaseObject.apply(this, arguments)
@@ -281,7 +281,7 @@ exports.Term = function() {
     return that
   }
 }
-exports.Term.typeName = "Term"
+exports.Term.prototype.typeName = "Term"
 
 exports.FuzzifyBlock = function() {
   BaseObject.apply(this, arguments)
@@ -293,7 +293,7 @@ exports.FuzzifyBlock = function() {
     return that
   }
 }
-exports.FuzzifyBlock.typeName = "FuzzifyBlock"
+exports.FuzzifyBlock.prototype.typeName = "FuzzifyBlock"
 
 exports.DefuzzMethod = function() {
   BaseObject.apply(this, arguments)
@@ -304,7 +304,7 @@ exports.DefuzzMethod = function() {
     return that
   }
 }
-exports.DefuzzMethod.typeName = "DefuzzMethod"
+exports.DefuzzMethod.prototype.typeName = "DefuzzMethod"
 defuzzMethods = {}
 defuzzMethods[c.COG_METHOD_TKN] = new exports.DefuzzMethod({method: c.COG_METHOD_TKN})
 defuzzMethods[c.COGS_METHOD_TKN] = new exports.DefuzzMethod({method: c.COGS_METHOD_TKN})
@@ -323,7 +323,7 @@ exports.DefuzzDefVal = function() {
     return that
   }
 }
-exports.DefuzzDefVal.typeName = "DefuzzDefVal"
+exports.DefuzzDefVal.prototype.typeName = "DefuzzDefVal"
 
 exports.DefuzzRange = function() {
   BaseObject.apply(this, arguments)
@@ -335,7 +335,7 @@ exports.DefuzzRange = function() {
     return that
   }
 }
-exports.DefuzzRange.typeName = "DefuzzRange"
+exports.DefuzzRange.prototype.typeName = "DefuzzRange"
 
 exports.DefuzzifyBlock = function() {
   BaseObject.apply(this, arguments)
@@ -350,7 +350,7 @@ exports.DefuzzifyBlock = function() {
     return that
   }
 }
-exports.DefuzzifyBlock.typeName = "DefuzzifyBlock"
+exports.DefuzzifyBlock.prototype.typeName = "DefuzzifyBlock"
 
 exports.Operator = function() {
   BaseObject.apply(this, arguments)
@@ -361,7 +361,7 @@ exports.Operator = function() {
     return that
   }
 }
-exports.Operator.typeName = "Operator"
+exports.Operator.prototype.typeName = "Operator"
 operators = {}
 operators[c.OPERATOR_DEF_AND_TKN] = new exports.Operator({operator: c.OPERATOR_DEF_AND_TKN})
 operators[c.OPERATOR_DEF_OR_TKN] = new exports.Operator({operator: c.OPERATOR_DEF_OR_TKN})
@@ -376,7 +376,7 @@ exports.OperatorFunc = function() {
     return that
   }
 }
-exports.OperatorFunc.typeName = "OperatorFunc"
+exports.OperatorFunc.prototype.typeName = "OperatorFunc"
 operatorFuncs = {}
 operatorFuncs[c.AND_METHOD_BDIF_TKN] = new exports.OperatorFunc({func: c.AND_METHOD_BDIF_TKN})
 operatorFuncs[c.AND_METHOD_MIN_TKN] = new exports.OperatorFunc({func: c.AND_METHOD_MIN_TKN})
@@ -396,7 +396,7 @@ exports.OperatorDef = function() {
     return that
   }
 }
-exports.OperatorDef.typeName = "OperatorDef"
+exports.OperatorDef.prototype.typeName = "OperatorDef"
 
 exports.ActivationMethod = function() {
   BaseObject.apply(this, arguments)
@@ -407,7 +407,7 @@ exports.ActivationMethod = function() {
     return that
   }
 }
-exports.ActivationMethod.typeName = "ActivationMethod"
+exports.ActivationMethod.prototype.typeName = "ActivationMethod"
 activationMethods = {}
 activationMethods[c.ACT_METHOD_MIN_TKN] = new exports.ActivationMethod({method: c.ACT_METHOD_MIN_TKN})
 activationMethods[c.ACT_METHOD_PROD_TKN] = new exports.ActivationMethod({method: c.ACT_METHOD_PROD_TKN})
@@ -422,7 +422,7 @@ exports.AccumulationMethod = function() {
     return that
   }
 }
-exports.AccumulationMethod.typeName = "AccumulationMethod"
+exports.AccumulationMethod.prototype.typeName = "AccumulationMethod"
 accumulationMethods = {}
 accumulationMethods[c.ACCUM_METHOD_MAX_TKN] = new exports.AccumulationMethod({method: c.ACCUM_METHOD_MAX_TKN})
 accumulationMethods[c.ACCUM_METHOD_BSUM_TKN] = new exports.AccumulationMethod({method: c.ACCUM_METHOD_BSUM_TKN})
@@ -440,7 +440,7 @@ exports.Assertion = function() {
     return that
   }
 }
-exports.Assertion.typeName = "Assertion"
+exports.Assertion.prototype.typeName = "Assertion"
 
 exports.Expression = function() {
   BaseObject.apply(this, arguments)
@@ -453,7 +453,7 @@ exports.Expression = function() {
     return that
   }
 }
-exports.Expression.typeName = "Expression"
+exports.Expression.prototype.typeName = "Expression"
 
 exports.WithCond = function() {
   BaseObject.apply(this, arguments)
@@ -464,7 +464,7 @@ exports.WithCond = function() {
     return that
   }
 }
-exports.WithCond.typeName = "WithCond"
+exports.WithCond.prototype.typeName = "WithCond"
 
 exports.Rule = function() {
   BaseObject.apply(this, arguments)
@@ -478,7 +478,7 @@ exports.Rule = function() {
     return that
   }
 }
-exports.Rule.typeName = "Rule"
+exports.Rule.prototype.typeName = "Rule"
 
 exports.RuleBlock = function() {
   BaseObject.apply(this, arguments)
@@ -494,7 +494,7 @@ exports.RuleBlock = function() {
     return that
   }
 }
-exports.RuleBlock.typeName = "RuleBlock"
+exports.RuleBlock.prototype.typeName = "RuleBlock"
 
 exports.FunctionBlock = function() {
   BaseObject.apply(this, arguments)
@@ -509,4 +509,4 @@ exports.FunctionBlock = function() {
     return that
   }
 }
-exports.FunctionBlock.typeName = "FunctionBlock"
+exports.FunctionBlock.prototype.typeName = "FunctionBlock"
