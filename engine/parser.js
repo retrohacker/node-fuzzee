@@ -24,11 +24,11 @@ parser.prototype._transform = function(chunk, encoding, cb) {
     this._neededTokens = this._run()
   }
 
-  retObj = []
+  retString = ''
   while(this._returnObjects.length > 0) {
-    retObj.push(this._returnObjects.shift())
+    retString += this._returnObjects.shift().toString()
   }
-  cb(null, retObj.toString())
+  cb(null, retString)
 }
 
 parser.prototype._run = function () {
