@@ -3,115 +3,264 @@ var obj = require('../objects/objects')
 // We are simply extending objects
 module.exports = obj
 
+function defaultBlocks(name) {
+  return "module.exports." + name + ".prototype.get = function(name) { \
+    if(typeof this.__inVars[name] != 'undefined') { \
+      return this.__inVars[name] \
+    } \
+    else if(typeof this.__outVars[name] != 'undefined') { \
+      return this.__outVars[name] \
+    } \
+    else if(typeof this.__localVars[name] != 'undefined') { \
+      return this.__localVars[name] \
+    } \
+    else { \
+      throw 'Unknown variable ' + name \
+    } \
+  }; \
+  module.exports." + name +".prototype.set = function(name, value) { \
+    self = this; \
+    if(typeof this.__inVars[name] != 'undefined') { \
+      this.__inVars[name] = value; \
+      this.__inVarTerms[name].forEach(function(term) { \
+        self.__inVarTermValues[name][term] = self.__fuzzFunctions[name][term]() \
+      }) \
+    } \
+    else { \
+      throw 'Unknown input variable ' + name \
+    } \
+  }; \
+  module.exports." + name + ".prototype.evaluate = function() { \
+  }; ";
+}
+
+var internalArrays = 
+  "this.__inVars = {}; \
+  this.__outVars = {}; \
+  this.__localVars = {}; \
+  this.__fuzzFunctions = {}; \
+  this.__defuzzFunctions = {}; \
+  this.__defuzzTermFunctions = {}; \
+  this.__inVarTerms = {}; \
+  this.__outVarTerms = {}; \
+  this.__inVarTermValues = {}; \
+  this.__outVarTermValues = {};";
+
 obj.FunctionBlock.prototype.toString = function() {
-  var result = ""
-  result += methodSignature(this)
-  result += "{"
-  result += variables(this)
-  result += fuzzifyBlocks(this)
-  result += returnFunc(this)
-  result+="}"
-  return result
-}
+  var result = "module.exports." + this.name + " = function() {"
+  result += "self = this;"
+  result += internalArrays
 
-function methodSignature(self) {
-  var result = "function"
-  if(self.name) {
-    result += " "+self.name
-  }
-  result+= "("
-  if(self.varBlocks)
-    result+= generateVars(self,"INPUT")
-  result+= ")"
-  return result
-}
+  this.varBlocks.forEach(function(block) {
+    result += block.toString()
+  })
 
-function variables(self) {
-  var result = ""
-  if(self.varBlocks) {
-    self.varBlocks.forEach(function(v) {
-      if(v.vars) {
-        v.vars.forEach(function(v) {
-          result+="var "+v.toString()+"={"
-          if(v.type.type === "INPUT")
-            result+="value:"+v.toString()
-          result+="};"
-        })
-      }
-    })
-  }
-  return result
-}
+  this.fuzzifyBlocks.forEach(function(block) {
+    result += block.toString()
+  })
 
-function returnFunc(self) {
-  var result = "var __output={};"
-  if(this.varBlocks) {
-    this.varBlocks.forEach(function(v) {
-      v.getVarOfType("OUTPUT").forEach(function(v) {
-        result+="output."+v+"="+v+";"
-      })
+  if(this.defuzzifyBlocks != null) {
+    this.defuzzifyBlocks.forEach(function(block) {
+      result += block.toString()
     })
   }
 
-  result+="return __output"
+  result += "}; "
+
+  result += defaultBlocks(this.name)
+
   return result
 }
 
-function fuzzifyBlocks(self) {
-  var result = "__fuzzees={};"
-  self.fuzzifyBlocks.forEach(function(v) {
-    if(!v.var || !v.var.type || v.var.type.type !== "INPUT") return;
-    result+="__fuzzees."+v.var.name+"={}";
-    if(!v.var.terms) return;
-    v.var.terms.forEach(function(v1) {
-      result+="__fuzzees."+v.var.name+"."+v1.name+"="+v1.toString()+";"
-    })
+obj.VarBlock.prototype.toString = function() {
+  result = ""
+  this.vars.forEach(function(v) {
+    result += v.toString() + " = 0;"
+    if(v.type == obj.VarTypes.INPUT) {
+      result += v.toString().replace('inVars', 'inVarTerms') + " = [];"
+      result += v.toString().replace('inVars', 'fuzzFunctions') + " = {};"
+      result += v.toString().replace('inVars', 'inVarTermValues') + " = {};"
+    }
+    else if(v.type == obj.VarTypes.OUTPUT) {
+      result += v.toString().replace('outVars', 'defuzzTermFunctions') + " = {};"
+      result += v.toString().replace('outVars', 'outVarTerms') + " = [];"
+      result += v.toString().replace('outVars', 'outVarTermValues') + " = {};"
+    }
   })
   return result
-}
-
-function generateVars(self,type) {
-  var result = ""
-  self.varBlocks.forEach(function(v) {
-    var input = v.getVarOfType(type)
-    if(input.length === 0) return;
-    result+=input.pop()
-    input.forEach(function(v) {
-      result+=","+v
-    })
-  })
-  return result
-}
-
-obj.Term.prototype.toString = function() {
-  var result = "function"
-  if(this.name)
-    result +=" "+this.name
-  result+="(__val){"
-  result+="/*"+this.func.toString()+"*/"
-  result+="}"
-  return result;
-}
-
-obj.VarBlock.prototype.getVarOfType = function(type) {
-  var result = []
-  if(this.vars)
-    this.vars.forEach(function(v) {
-      if(v.type.type === type)
-        result.push(v.toString())
-    })
-  return result
-
 }
 
 obj.Var.prototype.toString = function() {
-  return this.name
+  switch(this.type) {
+    case obj.VarTypes.INPUT:
+      return "self.__inVars." + this.name
+    case obj.VarTypes.OUTPUT:
+      return "self.__outVars." + this.name;
+    case obj.VarTypes.LOCAL:
+      return "self.__localVars." + this.name;
+  }
 }
 
 obj.FuzzifyBlock.prototype.toString = function() {
-  var result = ""
-  if(this.var) {
-    result+=""
-  }
+  self = this
+  result = ""
+  this.terms.forEach(function(t) {
+    result += "this.__inVarTerms." + self.var.name + ".push('" + t.name + "');"
+    result += "this.__fuzzFunctions." + self.var.name + "." + t.name + " = function() {"
+    result += t.func.toString()
+    result += "return calc(" + self.var.toString() + ");"
+    result += "};"
+  })
   return result
+}
+
+obj.DefuzzifyBlock.prototype.toString = function() {
+  self = this
+  result = ""
+  this.terms.forEach(function(t) {
+    result += "this.__outVarTerms." + self.var.name + ".push('" + t.name + "');"
+    result += "this.__defuzzTermFunctions." + self.var.name + "." + t.name + " = function() {"
+    result += t.func.toString()
+    result += "return calc(" + self.var.toString() + ");"
+    result += "};"
+  })
+  result += "this.__defuzzFunctions." + self.var.name + " = function() {"
+  result += "if(Object.keys(self.__outVarTermValues[" + this.var.name + "]).length == 0) {"
+  if(self.defaultVal == null || self.defaultVal.isNC) {
+    result += "return 0"
+  }
+  else {
+    result += "return " + self.defaultVal.value
+  }
+  result += "};"
+
+  switch(self.defuzzMethod) {
+    case obj.DefuzzMethods.COG:
+      result += "sum = 0, weightedSum = 0, step = (max - min) / 1000; \
+      for(i = min; i < max; i += step) { \
+        vals = []; \
+        self.__outVarTerms[" + this.var.name + "].forEach(function(t) { \
+          vals.push(this.__defuzzTermFunctions[" + this.var.name + "][t](i) * self.__outVarTermValues[" + this.var.name + "][t]); \
+        }); \
+        sum += i; \
+        weightedSum += Math.max(vals) * result; \
+      }; \
+      val = weightedSum / sum;"
+      break
+
+    case obj.DefuzzMethods.COGS:
+      // @TODO
+      break
+
+    case obj.DefuzzMethods.COA:
+      // @TODO
+      break
+
+    case obj.DefuzzMethods.LM:
+      // @TODO
+      break
+
+    case obj.DefuzzMethods.RM:
+      // @TODO
+      break
+  }
+
+  if(self.range) {
+    result += "if(val < " + self.range.min + ") { \
+      return " + self.range.min + " \
+    } else if(val > " + self.range.max + ") { \
+      return " + self.range.max + " \
+    } else { \
+      return val \
+    }"
+  }
+  else {
+    result += "return val"
+  }
+
+  result += "};"
+  return result
+}
+
+obj.Gauss.prototype.toString = function() {
+  // @TODO
+}
+
+obj.Gbell.prototype.toString = function() {
+  // @TODO
+}
+
+obj.Func.prototype.toString = function() {
+  return "return " + t.func.func
+}
+
+obj.Piecewise.prototype.toString = function() {
+  result = "function calc(x) {"
+  xs = "xs = ["
+  ys = "ys = ["
+  min = this.points[0].x
+  max = this.points[0].x
+  this.points.forEach(function(point) {
+    min = Math.min(min, point.x)
+    max = Math.max(min, point.x)
+    xs += point.x + ","
+    ys += point.y + ","
+  })
+  result += xs + "];" + ys + "];"
+  result += 
+    "lo = 0, hi = xs.length - 1; \
+    while (hi - lo > 1) { \
+      mid = (lo + hi) >> 1; \
+      if (x < xs[mid]) hi = mid; \
+      else lo = mid; \
+    } \
+    return ys[lo] + (ys[hi] - ys[lo]) / (xs[hi] - xs[lo]) * (x- xs[lo]) \
+  };"
+  result += "min = " + min + ";"
+  result += "max = " + max + ";"
+  return result
+}
+
+obj.Sigm.prototype.toString = function() {
+  // @TODO
+}
+
+obj.Singleton.prototype.toString = function() {
+  result = "function calc(x) {"
+  result += "if(x == "
+  if(typeof this.func.value == 'number') {
+    result += this.func.value
+  } else {
+    result += this.func.value.toString()
+  }
+  result +=
+    ") { \
+    return 1 \
+  } else { \
+    return 0 \
+  } \
+  };"
+  return result
+}
+
+obj.Trian.prototype.toString = function() {
+  result = "function calc(x) {"
+  result += "xs = [" + this.min + "," + this.mid + "," + this.high + "];"
+  result += "ys = [0, 1, 0];"
+  result += 
+    "lo = 0, hi = xs.length - 1; \
+    while (hi - lo > 1) { \
+      mid = (lo + hi) >> 1; \
+      if (x < xs[mid]) hi = mid; \
+      else lo = mid; \
+    } \
+    return ys[lo] + (ys[hi] - ys[lo]) / (xs[hi] - xs[lo]) * (x - xs[lo]) \
+  };"
+  result += "min = " + this.min + ";"
+  result += "max = " + this.max + ";"
+  return result
+}
+
+obj.Trape.prototype.toString = function() {
+  // @TODO
 }

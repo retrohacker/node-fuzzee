@@ -481,7 +481,7 @@ parser.prototype._run = function () {
               while(this._tokens[0] != 'SEMICOLON_TKN') {
                 tkn = this._tokens.shift()
                 if(typeof tkn == 'object') {
-                  funString += this._jsMathFunctions(tkn.value)
+                  funString += 'this.__inVars.' + this._jsMathFunctions(tkn.value)
                 }
                 else {
                   switch(tkn) {
