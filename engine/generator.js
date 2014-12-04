@@ -29,9 +29,7 @@ function defaultBlocks(name) {
     else { \
       throw 'Unknown input variable ' + name \
     } \
-  }; \
-  module.exports." + name + ".prototype.evaluate = function() { \
-  }; ";
+  };"
 }
 
 var internalArrays = 
@@ -68,6 +66,14 @@ obj.FunctionBlock.prototype.toString = function() {
   result += "}; "
 
   result += defaultBlocks(this.name)
+
+  if(this.ruleBlocks != null) {
+    result += "module.exports." + name +".prototype.evaluate = function() { "
+    this.ruleBlocks.forEach(function(block) {
+      result += block.toString()
+    })
+    result += "};"
+  }
 
   return result
 }
@@ -263,4 +269,85 @@ obj.Trian.prototype.toString = function() {
 
 obj.Trape.prototype.toString = function() {
   // @TODO
+}
+
+obj.RuleBlock.prototype.toString = function() {
+  result = ""
+
+  switch(this.andOperatorDef) {
+    case obj.OperatorFuncs.PROD:
+      result += "function and(one, two) { \
+        return one * two \
+      }; \
+      function or(one, two) { \
+        return one + two - one * two \
+      };"
+      break
+
+    case obj.OperatorFuncs.BDIF:
+      result += "function and(one, two) { \
+        return Math.max(0, one + two - 1) \
+      }; \
+      function or(one, two) { \
+        return Math.min(1, one + two) \
+      };"
+      break
+
+    case obj.OperatorFuncs.MIN:
+    default:
+      result += "function and(one, two) { \
+        return Math.min(one, two) \
+      }; \
+      function or(one, two) { \
+        return Math.max(one, two) \
+      };"
+      break
+  }
+
+  switch(this.activationMethod) {
+    case obj.ActivationMethods.PROD:
+      result += "function act(one, two) { \
+        return Math.min(one, two) \
+      };"
+      break
+
+    case obj.ActivationMethods.MIN:
+    default:
+      result += "function act(one, two) { \
+        return one * two \
+      };"
+      break
+  }
+
+  switch(this.accumulationMethod) {
+    case obj.AccumulationMethods.BSUM:
+      result += "function acc(one, two) { \
+        return Math.min(1, one + two) \
+      };"
+      break
+
+    case obj.AccumulationMethods.NSUM:
+      result += "function acc(one, two) { \
+        return (one + two) / Math.max(1, Math.max((1 - one) + (1 - two))) \
+      };"
+      break
+
+    case obj.AccumulationMethods.MAX:
+    default:
+      result += "function acc(one, two) { \
+        return Math.max(one, two) \
+      };"
+      break
+  }
+
+  this.rules.forEach(function(rule) {
+    result += rule.toString()
+  })
+
+  return result
+}
+
+obj.RuleBlock.prototype.toString = function() {
+  result = ""
+  
 }
