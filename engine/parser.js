@@ -682,13 +682,38 @@ parser.prototype._run = function () {
 
         this._stack.top().set('ifCond', this._recursiveExpr(subTokens))
 
-        subTokens = []
         this._tokens.shift()
+        this._stack.top().set('thenCond', [])
         while(this._tokens[0] != 'SEMICOLON_TKN' && this._tokens[0] != 'WITH_CONDITION_TKN') {
-          subTokens.push(this._tokens.shift())
-        }
+          assert = new objects.Assertion()
 
-        this._stack.top().set('thenCond', this._recursiveExpr(subTokens))
+          v = this._getVar(this._tokens.shift().value)
+          assert.set('var', v)
+
+          if(this._tokens.shift() != 'IS_LOGIC_TKN') {
+            this._throwStateError('Consequents must be separated by IS')
+          }
+
+          if(this._tokens[0] == 'NOT_LOGIC_TKN') {
+            assert.set('not', true)
+            this._tokens.shift()
+          }
+
+          tkn = this._tokens.shift().value
+          term = this._getVarTerm(v, tkn)
+          if(term == null) {
+            this._throwStateError('Var ' + v.name + ' does not have term ' + tkn)
+          }
+          else {
+            assert.set('term', term)
+          }
+
+          this._stack.top().set('thenCond', this._stack.top().thenCond.concat([assert]))
+
+          if(this._tokens[0] == 'COMMA_TKN') {
+            this._tokens.shift()
+          }
+        }
 
         if(this._tokens[0] == 'WITH_CONDITION_TKN') {
           this._tokens.shift()
@@ -723,7 +748,7 @@ parser.prototype._recursiveExpr = function(tokens) {
     assert.set('var', v)
 
     if(tokens[termTkn] == 'NOT_LOGIC_TKN') {
-      assert.set('not')
+      assert.set('not', true)
       termTkn++
     }
 
@@ -735,7 +760,7 @@ parser.prototype._recursiveExpr = function(tokens) {
       assert.set('term', term)
     }
 
-    tokens = tokens.splice(0, varTkn).concat([assert]).concat(tokens.splice(termTkn + 1, tokens.length))
+    tokens = tokens.slice(0, varTkn).concat([assert]).concat(tokens.slice(termTkn + 1, tokens.length))
   }
 
   // Recursively resolve all parenthetical expressions
@@ -753,7 +778,7 @@ parser.prototype._recursiveExpr = function(tokens) {
     }
 
     expr = [this._recursiveExpr(tokens.slice(parenStart + 1, counter))]
-    tokens = tokens.slice(0, parenStart).concat(expr).concat(tokens.slice(counter + 1))
+    tokens = tokens.slice(0, parenStart - 1).concat(expr).concat(tokens.slice(counter + 1))
   }
 
   // Resolve all ANDs to expressions
@@ -762,16 +787,16 @@ parser.prototype._recursiveExpr = function(tokens) {
     expr = new objects.Expression({operator: objects.Operators.AND})
     expr.set('firstHalf', tokens[and - 1])
     expr.set('secondHalf', tokens[and + 1])
-    tokens = tokens.splice(0, and).concat([expr]).concat(tokens.splice(and + 1, tokens.length))
+    tokens = tokens.slice(0, and - 1).concat([expr]).concat(tokens.slice(and + 2, tokens.length))
   }
 
   // Resolve all ORs to expressions
   while(tokens.indexOf('OR_TKN') != -1) {
-    and = tokens.indexOf('OR_TKN')
+    or = tokens.indexOf('OR_TKN')
     expr = new objects.Expression({operator: objects.Operators.OR})
-    expr.set('firstHalf', tokens[and - 1])
-    expr.set('secondHalf', tokens[and + 1])
-    tokens = tokens.splice(0, and).concat([expr]).concat(tokens.splice(and + 1, tokens.length))
+    expr.set('firstHalf', tokens[or - 1])
+    expr.set('secondHalf', tokens[or + 1])
+    tokens = tokens.slice(0, or - 1).concat([expr]).concat(tokens.slice(or + 2, tokens.length))
   }
 
   // Should now just be one expression left

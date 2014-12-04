@@ -62,7 +62,7 @@ fuzzee.prototype.setFunction = function(name) {
   }
 }
 
-fuzzee.prototype.set = function set(key,val) {
+fuzzee.prototype.set = function(key,val) {
   if(typeof this._currentObj != 'undefined') {
     this._currentObj.set(key, val)
   }
@@ -71,7 +71,7 @@ fuzzee.prototype.set = function set(key,val) {
   }
 }
 
-fuzzee.prototype.get = function get(key) {
+fuzzee.prototype.get = function(key) {
   if(typeof this._currentObj != 'undefined') {
     return this._currentObj.get(key)
   }
@@ -80,7 +80,13 @@ fuzzee.prototype.get = function get(key) {
   }
 }
 
-fuzzee.prototype.evaluate = function evaluate() {
+fuzzee.prototype.evaluate = function() {
+  if(typeof this._currentObj != 'undefined') {
+    this._currentObj.evaluate()
+  }
+  else {
+    throw 'Please select a function before calling evaluate'
+  }
 }
 
 module.exports = fuzzee

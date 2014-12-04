@@ -372,7 +372,7 @@ exports.Assertion = function() {
 
   this.validate = function() {
     checkType(this, 'var', exports.Var, false)
-    checkType(this, 'var', exports.Term, false)
+    checkType(this, 'term', exports.Term, false)
     checkType(this, 'not', BOOL_TYPE, true)
   }
 }
@@ -404,7 +404,7 @@ exports.Rule = function() {
   this.validate = function() {
     checkType(this, 'number', NUMBER_TYPE, false)
     checkType(this, 'ifCond', [exports.Assertion, exports.Expression], false)
-    checkType(this, 'thenCond', [exports.Assertion, exports.Expression], false)
+    checkArrayType(this, 'thenCond', [exports.Assertion], false)
     checkType(this, 'withCond', exports.WithCond, true)
   }
 }

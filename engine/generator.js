@@ -68,7 +68,7 @@ obj.FunctionBlock.prototype.toString = function() {
   result += defaultBlocks(this.name)
 
   if(this.ruleBlocks != null) {
-    result += "module.exports." + name +".prototype.evaluate = function() { "
+    result += "module.exports." + this.name +".prototype.evaluate = function() { "
     this.ruleBlocks.forEach(function(block) {
       result += block.toString()
     })
@@ -122,7 +122,6 @@ obj.FuzzifyBlock.prototype.toString = function() {
 
 obj.DefuzzifyBlock.prototype.toString = function() {
   self = this
-  result = ""
   this.terms.forEach(function(t) {
     result += "this.__outVarTerms." + self.var.name + ".push('" + t.name + "');"
     result += "this.__defuzzTermFunctions." + self.var.name + "." + t.name + " = function() {"
@@ -344,10 +343,61 @@ obj.RuleBlock.prototype.toString = function() {
     result += rule.toString()
   })
 
+  result += "for(v in self.__outVars) { \
+    this.__outVars[v] = this.__defuzzFunctions[v]() \
+  };"
+
   return result
 }
 
-obj.RuleBlock.prototype.toString = function() {
+obj.Rule.prototype.toString = function() {
+  self = this
+  result += "degreeOfSupport = " + this.ifCond.toString() + ";"
+  this.thenCond.forEach(function(then) {
+    t = "self.__outVarTermValues." + then.var.name + "." + then.term.name
+    result += "res = "
+    if(then.not) {
+      result += "1 - "
+    }
+    result += "degreeOfSupport"
+    if(self.withCond) {
+      result += " * "
+      if(typeof self.withCond.value == 'number') {
+        result += self.withCond.value
+      } else {
+        result += self.withCond.value.toString()
+      }
+    }
+    result += ";"
+    result += "if(" + t + ") { \
+      " + t + " = acc(" + t + ", res) \
+    } else { \
+      " + t + " = res \
+    };"
+  })
+  return result
+}
+
+obj.Assertion.prototype.toString = function() {
   result = ""
-  
+  if(this.not) {
+    result += "1 - "
+  }
+  result += "self.__inVarTermValues." + this.var.name + "." + this.term.name
+  return result
+}
+
+obj.Expression.prototype.toString = function() {
+  result = ""
+  switch(this.operator) {
+    case obj.Operators.AND:
+      result += "and("
+      break
+
+    case obj.Operators.OR:
+      result += "or("
+      break
+  }
+  result += this.firstHalf.toString() + ", " + this.secondHalf.toString() + ")"
+  return result
 }
