@@ -130,7 +130,7 @@ obj.DefuzzifyBlock.prototype.toString = function() {
     result += "};"
   })
   result += "this.__defuzzFunctions." + self.var.name + " = function() {"
-  result += "if(Object.keys(self.__outVarTermValues[" + this.var.name + "]).length == 0) {"
+  result += "if(Object.keys(self.__outVarTermValues." + this.var.name + ").length == 0) {"
   if(self.defaultVal == null || self.defaultVal.isNC) {
     result += "return 0"
   }
@@ -144,8 +144,8 @@ obj.DefuzzifyBlock.prototype.toString = function() {
       result += "sum = 0, weightedSum = 0, step = (max - min) / 1000; \
       for(i = min; i < max; i += step) { \
         vals = []; \
-        self.__outVarTerms[" + this.var.name + "].forEach(function(t) { \
-          vals.push(this.__defuzzTermFunctions[" + this.var.name + "][t](i) * self.__outVarTermValues[" + this.var.name + "][t]); \
+        self.__outVarTerms." + this.var.name + ".forEach(function(t) { \
+          vals.push(self.__defuzzTermFunctions." + this.var.name + "[t](i) * self.__outVarTermValues." + this.var.name + "[t]); \
         }); \
         sum += i; \
         weightedSum += Math.max(vals) * result; \
