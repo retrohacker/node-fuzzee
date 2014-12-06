@@ -42,7 +42,8 @@ var internalArrays =
   this.__inVarTerms = {}; \
   this.__outVarTerms = {}; \
   this.__inVarTermValues = {}; \
-  this.__outVarTermValues = {};";
+  this.__outVarTermValues = {}; \
+  this.__outVarRanges = {};";
 
 obj.FunctionBlock.prototype.toString = function() {
   var result = "module.exports." + this.name + " = function() {"
@@ -89,6 +90,7 @@ obj.VarBlock.prototype.toString = function() {
     }
     else if(v.type == obj.VarTypes.OUTPUT) {
       result += v.toString().replace('outVars', 'defuzzTermFunctions') + " = {};"
+      result += v.toString().replace('outVars', 'outVarRanges') + " = {};"
       result += v.toString().replace('outVars', 'outVarTerms') + " = [];"
       result += v.toString().replace('outVars', 'outVarTermValues') + " = {};"
     }
@@ -120,37 +122,62 @@ obj.FuzzifyBlock.prototype.toString = function() {
   return result
 }
 
+obj.DefuzzDefVal.prototype.toString = function() {
+  result = ""
+  if(this.isNC) {
+    result += "return 0"
+  }
+  else {
+    result += "return " + this.value
+  }
+  return result
+}
+
 obj.DefuzzifyBlock.prototype.toString = function() {
   self = this
   this.terms.forEach(function(t) {
     result += "this.__outVarTerms." + self.var.name + ".push('" + t.name + "');"
-    result += "this.__defuzzTermFunctions." + self.var.name + "." + t.name + " = function() {"
+    result += "this.__defuzzTermFunctions." + self.var.name + "." + t.name + " = function(x) {"
     result += t.func.toString()
-    result += "return calc(" + self.var.toString() + ");"
+    result += "if(self.__outVarRanges." + self.var.name + ".min != null) { \
+      self.__outVarRanges." + self.var.name + ".min = Math.min(min, self.__outVarRanges." + self.var.name + ".min); \
+    } else { \
+       self.__outVarRanges." + self.var.name + ".min = min \
+    }; \
+    if(self.__outVarRanges." + self.var.name + ".max != null) { \
+      self.__outVarRanges." + self.var.name + ".max = Math.max(max, self.__outVarRanges." + self.var.name + ".max) \
+    } else { \
+       self.__outVarRanges." + self.var.name + ".max = max \
+    };"
+    result += "return calc(x);"
     result += "};"
+    // Exercise each function once to set the range
+    result += "this.__defuzzTermFunctions." + self.var.name + "." + t.name + "(0);"
   })
-  result += "this.__defuzzFunctions." + self.var.name + " = function() {"
+  result += "this.__defuzzFunctions." + self.var.name + " = function(acc) {"
+
   result += "if(Object.keys(self.__outVarTermValues." + this.var.name + ").length == 0) {"
-  if(self.defaultVal == null || self.defaultVal.isNC) {
-    result += "return 0"
-  }
-  else {
-    result += "return " + self.defaultVal.value
-  }
+  result += this.defaultVal.toString()
   result += "};"
 
-  switch(self.defuzzMethod) {
+  switch(this.defuzzMethod) {
     case obj.DefuzzMethods.COG:
       result += "sum = 0, weightedSum = 0, step = (max - min) / 1000; \
-      for(i = min; i < max; i += step) { \
-        vals = []; \
+      for(i = self.__outVarRanges." + this.var.name + ".min; i <= self.__outVarRanges." + this.var.name + ".max; i += step) { \
+        locVal = 0; \
         self.__outVarTerms." + this.var.name + ".forEach(function(t) { \
-          vals.push(self.__defuzzTermFunctions." + this.var.name + "[t](i) * self.__outVarTermValues." + this.var.name + "[t]); \
+          locVal = acc(locVal, self.__defuzzTermFunctions." + this.var.name + "[t](i) * self.__outVarTermValues." + this.var.name + "[t]) \
         }); \
-        sum += i; \
-        weightedSum += Math.max(vals) * result; \
+        if(locVal > 0) { \
+          sum += locVal; \
+          weightedSum += locVal * i \
+        }; \
       }; \
-      val = weightedSum / sum;"
+      if(sum > 0) { \
+        val = weightedSum / sum \
+      } else { \
+        val = 0 \
+      };"
       break
 
     case obj.DefuzzMethods.COGS:
@@ -200,7 +227,7 @@ obj.Func.prototype.toString = function() {
 }
 
 obj.Piecewise.prototype.toString = function() {
-  result = "function calc(x) {"
+  result = "calc = function (x) {"
   xs = "xs = ["
   ys = "ys = ["
   min = this.points[0].x
@@ -212,8 +239,11 @@ obj.Piecewise.prototype.toString = function() {
     ys += point.y + ","
   })
   result += xs + "];" + ys + "];"
+  result += "min = " + min + ";"
+  result += "max = " + max + ";"
   result += 
-    "lo = 0, hi = xs.length - 1; \
+    "if(x < min || x > max) { return 0 }; \
+    lo = 0, hi = xs.length - 1; \
     while (hi - lo > 1) { \
       mid = (lo + hi) >> 1; \
       if (x < xs[mid]) hi = mid; \
@@ -221,8 +251,6 @@ obj.Piecewise.prototype.toString = function() {
     } \
     return ys[lo] + (ys[hi] - ys[lo]) / (xs[hi] - xs[lo]) * (x- xs[lo]) \
   };"
-  result += "min = " + min + ";"
-  result += "max = " + max + ";"
   return result
 }
 
@@ -231,7 +259,7 @@ obj.Sigm.prototype.toString = function() {
 }
 
 obj.Singleton.prototype.toString = function() {
-  result = "function calc(x) {"
+  result = "calc = function (x) {"
   result += "if(x == "
   if(typeof this.func.value == 'number') {
     result += this.func.value
@@ -249,11 +277,14 @@ obj.Singleton.prototype.toString = function() {
 }
 
 obj.Trian.prototype.toString = function() {
-  result = "function calc(x) {"
+  result = "calc = function (x) {"
   result += "xs = [" + this.min + "," + this.mid + "," + this.high + "];"
   result += "ys = [0, 1, 0];"
+  result += "min = " + this.min + ";"
+  result += "max = " + this.max + ";"
   result += 
-    "lo = 0, hi = xs.length - 1; \
+    "if(x < min || x > max) { return 0 }; \
+    lo = 0, hi = xs.length - 1; \
     while (hi - lo > 1) { \
       mid = (lo + hi) >> 1; \
       if (x < xs[mid]) hi = mid; \
@@ -261,8 +292,6 @@ obj.Trian.prototype.toString = function() {
     } \
     return ys[lo] + (ys[hi] - ys[lo]) / (xs[hi] - xs[lo]) * (x - xs[lo]) \
   };"
-  result += "min = " + this.min + ";"
-  result += "max = " + this.max + ";"
   return result
 }
 
@@ -270,81 +299,91 @@ obj.Trape.prototype.toString = function() {
   // @TODO
 }
 
-obj.RuleBlock.prototype.toString = function() {
-  result = ""
+obj.Operator.prototype.toString = function() {
+  return this.operator.toLowerCase()
+}
 
-  switch(this.andOperatorDef) {
+obj.OperatorFunc.prototype.toString = function() {
+  switch(this) {
     case obj.OperatorFuncs.PROD:
-      result += "function and(one, two) { \
-        return one * two \
-      }; \
-      function or(one, two) { \
-        return one + two - one * two \
-      };"
-      break
+      return "return one * two"
 
-    case obj.OperatorFuncs.BDIF:
-      result += "function and(one, two) { \
-        return Math.max(0, one + two - 1) \
-      }; \
-      function or(one, two) { \
-        return Math.min(1, one + two) \
-      };"
-      break
+    case obj.OperatorFuncs.ASUM:
+      return "return one + two - one * two"
+
+    case obj.OperatorFuncs.BDIF: 
+      return "return Math.max(0, one + two - 1)"
+
+    case obj.OperatorFuncs.BSUM:
+      return "return Math.min(1, one + two)"
 
     case obj.OperatorFuncs.MIN:
-    default:
-      result += "function and(one, two) { \
-        return Math.min(one, two) \
-      }; \
-      function or(one, two) { \
-        return Math.max(one, two) \
-      };"
-      break
+      return "return Math.min(one, two)"
+
+    case obj.OperatorFuncs.MAX:
+      return "return Math.max(one, two)"
   }
+}
 
-  switch(this.activationMethod) {
-    case obj.ActivationMethods.PROD:
-      result += "function act(one, two) { \
-        return Math.min(one, two) \
-      };"
-      break
+obj.OperatorDef.prototype.toString = function() {
+  result = ""
+  result += this.operator.toString() + " = function(one, two) {"
+  result += this.func.toString()
+  result += "};"
+  return result
+}
 
+obj.ActivationMethod.prototype.toString = function() {
+  result = ""
+  result += "act = function(one, two) {"
+  switch(this) {
     case obj.ActivationMethods.MIN:
-    default:
-      result += "function act(one, two) { \
-        return one * two \
-      };"
+      result += "return Math.min(one, two)"
+      break
+
+    case obj.ActivationMethods.PROD:
+      result += "return one * two"
       break
   }
+  result += "};"
+  return result
+}
 
-  switch(this.accumulationMethod) {
+obj.AccumulationMethod.prototype.toString = function() {
+  result = ""
+  result += "acc = function(one, two) {"
+  switch(this) {
     case obj.AccumulationMethods.BSUM:
-      result += "function acc(one, two) { \
-        return Math.min(1, one + two) \
-      };"
+      result += "return Math.min(1, one + two)"
       break
 
     case obj.AccumulationMethods.NSUM:
-      result += "function acc(one, two) { \
-        return (one + two) / Math.max(1, Math.max((1 - one) + (1 - two))) \
-      };"
+      result += "return (one + two) / Math.max(1, Math.max((1 - one) + (1 - two)))"
       break
 
     case obj.AccumulationMethods.MAX:
-    default:
-      result += "function acc(one, two) { \
-        return Math.max(one, two) \
-      };"
+      result += "return Math.max(one, two)"
       break
   }
+  result += "};"
+  return result
+}
+
+obj.RuleBlock.prototype.toString = function() {
+  result = ""
+
+  result += this.andOperatorDef.toString()
+  result += this.orOperatorDef.toString()
+
+  result += this.activationMethod.toString()
+  result += this.accumulationMethod.toString()
 
   this.rules.forEach(function(rule) {
     result += rule.toString()
   })
 
   result += "for(v in self.__outVars) { \
-    this.__outVars[v] = this.__defuzzFunctions[v]() \
+    this.__outVars[v] = this.__defuzzFunctions[v](acc) \
   };"
 
   return result
@@ -352,6 +391,7 @@ obj.RuleBlock.prototype.toString = function() {
 
 obj.Rule.prototype.toString = function() {
   self = this
+  result = ""
   result += "degreeOfSupport = " + this.ifCond.toString() + ";"
   this.thenCond.forEach(function(then) {
     t = "self.__outVarTermValues." + then.var.name + "." + then.term.name
@@ -370,7 +410,7 @@ obj.Rule.prototype.toString = function() {
     }
     result += ";"
     result += "if(" + t + ") { \
-      " + t + " = acc(" + t + ", res) \
+      " + t + " = act(" + t + ", res) \
     } else { \
       " + t + " = res \
     };"

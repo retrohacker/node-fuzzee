@@ -581,7 +581,7 @@ parser.prototype._run = function () {
               }
 
               this._stack.top().set('andOperatorDef', andDef)
-              this._stack.top().set('orOperatorDef', andDef)
+              this._stack.top().set('orOperatorDef', orDef)
 
               this._checkSemicolon('Ruleblock operator definitions')
               break
