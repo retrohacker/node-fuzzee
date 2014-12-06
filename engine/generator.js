@@ -45,7 +45,7 @@ function piecewise(xs, ys) {
 
 function singleton(value) {
   return "calc = function (x) { \
-    if(x == eval('" + value + "')) { \
+    if(x == (" + value + ")) { \
       return 1 \
     } else { \
       return 0 \
