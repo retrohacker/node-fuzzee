@@ -3,6 +3,14 @@ var obj = require('../objects/objects')
 // We are simply extending objects
 module.exports = obj
 
+defaults = {
+  defaultVal: new obj.DefuzzDefVal({isNC: true}),
+  andOperatorDef: new obj.OperatorDef({operator: obj.Operators.AND, func: obj.OperatorFuncs.MIN}),
+  orOperatorDef: new obj.OperatorDef({operator: obj.Operators.OR, func: obj.OperatorFuncs.MAX}),
+  activationMethod: obj.ActivationMethods.MIN,
+  accumulationMethod: obj.AccumulationMethods.MAX
+}
+
 function defaultBlocks(name) {
   return "module.exports." + name + ".prototype.get = function(name) { \
     if(typeof this.__inVars[name] != 'undefined') { \
@@ -157,7 +165,12 @@ obj.DefuzzifyBlock.prototype.toString = function() {
   result += "this.__defuzzFunctions." + self.var.name + " = function(acc) {"
 
   result += "if(Object.keys(self.__outVarTermValues." + this.var.name + ").length == 0) {"
-  result += this.defaultVal.toString()
+  if(this.defaultVal) {
+    result += this.defaultVal.toString()
+  }
+  else {
+    result += obj.Defaults.defaultVal.toString()
+  }
   result += "};"
 
   switch(this.defuzzMethod) {
@@ -372,11 +385,27 @@ obj.AccumulationMethod.prototype.toString = function() {
 obj.RuleBlock.prototype.toString = function() {
   result = ""
 
-  result += this.andOperatorDef.toString()
-  result += this.orOperatorDef.toString()
+  if(this.andOperatorDef && this.orOperatorDef) {
+    result += this.andOperatorDef.toString()
+    result += this.orOperatorDef.toString()
+  }
+  else {
+    result += defaults.andOperatorDef.toString()
+    result += defaults.orOperatorDef.toString()
+  }
 
-  result += this.activationMethod.toString()
-  result += this.accumulationMethod.toString()
+  if(this.activationMethod) {
+    result += this.activationMethod.toString()
+  }
+  else {
+    result += defaults.activationMethod.toString()
+  }
+  if(this.accumulationMethod) {
+    result += this.accumulationMethod.toString()
+  }
+  else {
+    result += defaults.accumulationMethod.toString()
+  }
 
   this.rules.forEach(function(rule) {
     result += rule.toString()
