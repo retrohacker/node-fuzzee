@@ -481,24 +481,13 @@ parser.prototype._run = function () {
               while(this._tokens[0] != 'SEMICOLON_TKN') {
                 tkn = this._tokens.shift()
                 if(typeof tkn == 'object') {
-                  if(this._isNumber(tkn.value)) {
+                  if(this._isNumber(tkn.value) || this._isSymbol(tkn.value)) {
                     funString += this._jsMathFunctions(tkn.value)
                   }
                   else {
                     v = this._getVar(tkn.value)
                     if(v != null) {
-                      switch(v.type) {
-                        case objects.VarTypes.INPUT:
-                          funString += 'self.__inVars.'
-                          break
-                        case objects.VarTypes.OUTPUT:
-                          funString += 'self.__outVars.'
-                          break
-                        case objects.VarTypes.LOCAL:
-                          funString += 'self.__localVars.'
-                          break
-                      }
-                      funString += v.name
+                      funString += v.toString()
                     }
                     else {
                       this._throwVarError(tkn.value)
@@ -826,12 +815,11 @@ parser.prototype._recursiveExpr = function(tokens) {
 }
 
 parser.prototype._isNumber = function(v) {
-  try { 
-    parseInt(v); 
-  } catch(e) { 
-    return false; 
-  }
-  return true;
+  return !isNaN(parseInt(v))
+}
+
+parser.prototype._isSymbol = function(v) {
+  return ['+', '-', '*', '/', '%', 'SIN', 'COS'].indexOf(v) != -1
 }
 
 parser.prototype._getNumOrVar = function(tkn, context) {

@@ -45,7 +45,7 @@ function piecewise(xs, ys) {
 
 function singleton(value) {
   return "calc = function (x) { \
-    if(x == (" + value + ")) { \
+    if(x == eval('" + value + "')) { \
       return 1 \
     } else { \
       return 0 \
@@ -93,7 +93,8 @@ var internalArrays =
   this.__outVarTerms = {}; \
   this.__inVarTermValues = {}; \
   this.__outVarTermValues = {}; \
-  this.__outVarRanges = {};";
+  this.__outVarRanges = {}; \
+  this.__outDiscreteValues = {};";
 
 obj.FunctionBlock.prototype.toString = function() {
   var result = "module.exports." + this.name + " = function() {"
@@ -143,6 +144,22 @@ obj.VarBlock.prototype.toString = function() {
       result += v.toString().replace('outVars', 'outVarRanges') + " = {};"
       result += v.toString().replace('outVars', 'outVarTerms') + " = [];"
       result += v.toString().replace('outVars', 'outVarTermValues') + " = {};"
+      result += v.toString().replace('outVars', 'outDiscreteValues') + " = {};"
+      v.terms.forEach(function(t) {
+        if(t.func instanceof obj.Func || t.func instanceof obj.Singleton) {
+          result += "if(" + v.toString().replace('outVars', 'outDiscreteValues') + " == null) {"
+          result += v.toString().replace('outVars', 'outDiscreteValues') + " = {};"
+          result += "};"
+          result += v.toString().replace('outVars', 'outDiscreteValues') + "." + t.name + " = "
+          if(t.func instanceof obj.Func) {
+            result += "'" + t.func.func + "'"
+          }
+          else {
+            result += t.func.value
+          }
+          result += ";"
+        }
+      })
     }
   })
   return result
@@ -173,21 +190,18 @@ obj.FuzzifyBlock.prototype.toString = function() {
 }
 
 obj.DefuzzDefVal.prototype.toString = function() {
-  result = ""
   if(this.isNC) {
-    result += "return 0"
+    return "return 0;"
   }
   else {
-    result += "return " + this.value
+    return "return " + this.value + ";"
   }
-  return result
 }
 
 obj.DefuzzMethod.prototype.toString = function(varName) {
-  result = ""
   switch(this) {
     case obj.DefuzzMethods.COG:
-      result += "sum = 0, weightedSum = 0, step = (max - min) / 1000; \
+      return "sum = 0, weightedSum = 0, step = (max - min) / 1000; \
       for(i = self.__outVarRanges." + varName + ".min; i <= self.__outVarRanges." + varName + ".max; i += step) { \
         locVal = 0; \
         self.__outVarTerms." + varName + ".forEach(function(t) { \
@@ -203,25 +217,77 @@ obj.DefuzzMethod.prototype.toString = function(varName) {
       } else { \
         val = 0 \
       };"
-      break
 
     case obj.DefuzzMethods.COGS:
-      // @TODO
+      return "sum = 0, weightedSum = 0; \
+        self.__outVarTerms." + varName + ".forEach(function(t) { \
+          sum += eval(self.__outDiscreteValues." + varName + "[t]); \
+          weightedSum += eval(self.__outDiscreteValues." + varName + "[t]) * self.__outVarTermValues." + varName + "[t]; \
+        }); \
+        if(sum > 0) { \
+          val = weightedSum / sum \
+        } else { \
+          val = 0 \
+        };"
       break
 
     case obj.DefuzzMethods.COA:
-      // @TODO
-      break
+      return "sumLow = 0, sumHigh = 0, low = 0, high = 0, step = (max - min) / 1000; \
+      for(low = min, high = max; low < high) { \
+        if(sumLow <= sumHigh) { \
+          low += step; \
+          locVal = 0; \
+          self.__outVarTerms." + varName + ".forEach(function(t) { \
+            locVal = acc(locVal, self.__defuzzTermFunctions." + varName + "[t](low) * self.__outVarTermValues." + varName + "[t]) \
+          }); \
+          sumLow += locVal \
+        } else { \
+          high -= step; \
+          locVal = 0; \
+          self.__outVarTerms." + varName + ".forEach(function(t) { \
+            locVal = acc(locVal, self.__defuzzTermFunctions." + varName + "[t](high) * self.__outVarTermValues." + varName + "[t]) \
+          }); \
+          sumHigh += locVal \
+        } \
+      } \
+      val = min + low;"
 
     case obj.DefuzzMethods.LM:
-      // @TODO
-      break
+      return "max = 0, val = 0, last = 0, step = (max - min) / 1000; \
+      for(i = self.__outVarRanges." + varName + ".min; i <= self.__outVarRanges." + varName + ".max; i += step) { \
+        locVal = 0; \
+        self.__outVarTerms." + varName + ".forEach(function(t) { \
+          locVal = acc(locVal, self.__defuzzTermFunctions." + varName + "[t](i) * self.__outVarTermValues." + varName + "[t]) \
+        }); \
+        if(locVal > max) { \
+          max = locVal; \
+          val = i \
+        } \
+        else if(locVal < last) { \
+          break \
+        } else { \
+          last = locVal \
+        } \
+      };"
 
     case obj.DefuzzMethods.RM:
-      // @TODO
-      break
+      return "max = 0, val = 0, last = 0, step = (max - min) / 1000; \
+      for(i = self.__outVarRanges." + varName + ".max; i >= self.__outVarRanges." + varName + ".max; i -= step) { \
+        locVal = 0; \
+        self.__outVarTerms." + varName + ".forEach(function(t) { \
+          locVal = acc(locVal, self.__defuzzTermFunctions." + varName + "[t](i) * self.__outVarTermValues." + varName + "[t]) \
+        }); \
+        if(locVal > max) { \
+          max = locVal; \
+          val = i \
+        } \
+        else if(locVal < last) { \
+          break \
+        } else { \
+          last = locVal \
+        } \
+      };"
   }
-  return result
 }
 
 obj.DefuzzifyBlock.prototype.toString = function() {
@@ -252,7 +318,7 @@ obj.DefuzzifyBlock.prototype.toString = function() {
     result += this.defaultVal.toString()
   }
   else {
-    result += obj.Defaults.defaultVal.toString()
+    result += defaults.defaultVal.toString()
   }
   result += "};"
 
@@ -478,16 +544,5 @@ obj.Assertion.prototype.toString = function() {
 }
 
 obj.Expression.prototype.toString = function() {
-  result = ""
-  switch(this.operator) {
-    case obj.Operators.AND:
-      result += "and("
-      break
-
-    case obj.Operators.OR:
-      result += "or("
-      break
-  }
-  result += this.firstHalf.toString() + ", " + this.secondHalf.toString() + ")"
-  return result
+  return this.operator.toString() + "(" + this.firstHalf.toString() + ", " + this.secondHalf.toString() + ")"
 }
