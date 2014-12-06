@@ -481,7 +481,29 @@ parser.prototype._run = function () {
               while(this._tokens[0] != 'SEMICOLON_TKN') {
                 tkn = this._tokens.shift()
                 if(typeof tkn == 'object') {
-                  funString += 'this.__inVars.' + this._jsMathFunctions(tkn.value)
+                  if(this._isNumber(tkn.value)) {
+                    funString += this._jsMathFunctions(tkn.value)
+                  }
+                  else {
+                    v = this._getVar(tkn.value)
+                    if(v != null) {
+                      switch(v.type) {
+                        case objects.VarTypes.INPUT:
+                          funString += 'self.__inVars.'
+                          break
+                        case objects.VarTypes.OUTPUT:
+                          funString += 'self.__outVars.'
+                          break
+                        case objects.VarTypes.LOCAL:
+                          funString += 'self.__localVars.'
+                          break
+                      }
+                      funString += v.name
+                    }
+                    else {
+                      this._throwVarError(tkn.value)
+                    }
+                  }
                 }
                 else {
                   switch(tkn) {

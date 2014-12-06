@@ -187,7 +187,7 @@ exports.Gbell = function() {
   BaseObject.apply(this, arguments)
 
   this.validate = function() {
-    checkType(this, 'x', [exports.Var, NUMBER_TYPE], false)
+    checkType(this, 'a', [exports.Var, NUMBER_TYPE], false)
     checkType(this, 'b', [exports.Var, NUMBER_TYPE], false)
     checkType(this, 'mean', [exports.Var, NUMBER_TYPE], false)
   }

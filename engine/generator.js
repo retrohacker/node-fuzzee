@@ -11,6 +11,48 @@ defaults = {
   accumulationMethod: obj.AccumulationMethods.MAX
 }
 
+function varOrNum(val) {
+  if(val instanceof obj.Var) {
+    return val.toString()
+  }
+  else {
+    return val
+  }
+}
+
+function piecewise(xs, ys) {
+  xs = xs.map(function(x) {
+    return varOrNum(x)
+  })
+  ys = ys.map(function(y) {
+    return varOrNum(y)
+  })
+  return "xs = [" + xs + "]; \
+    ys = [" + ys + "]; \
+    min = Math.min.apply(null, xs); \
+    max = Math.max.apply(null, xs); \
+    calc = function (x) { \
+      if(x < min || x > max) { return 0 }; \
+      lo = 0, hi = xs.length - 1; \
+      while (hi - lo > 1) { \
+        mid = (lo + hi) >> 1; \
+        if (x < xs[mid]) hi = mid; \
+        else lo = mid; \
+      } \
+      return ys[lo] + (ys[hi] - ys[lo]) / (xs[hi] - xs[lo]) * (x - xs[lo]) \
+    };"
+}
+
+function singleton(value) {
+  return "calc = function (x) { \
+    if(x == (" + value + ")) { \
+      return 1 \
+    } else { \
+      return 0 \
+    } \
+    };"
+}
+
 function defaultBlocks(name) {
   return "module.exports." + name + ".prototype.get = function(name) { \
     if(typeof this.__inVars[name] != 'undefined') { \
@@ -111,9 +153,9 @@ obj.Var.prototype.toString = function() {
     case obj.VarTypes.INPUT:
       return "self.__inVars." + this.name
     case obj.VarTypes.OUTPUT:
-      return "self.__outVars." + this.name;
+      return "self.__outVars." + this.name
     case obj.VarTypes.LOCAL:
-      return "self.__localVars." + this.name;
+      return "self.__localVars." + this.name
   }
 }
 
@@ -137,6 +179,47 @@ obj.DefuzzDefVal.prototype.toString = function() {
   }
   else {
     result += "return " + this.value
+  }
+  return result
+}
+
+obj.DefuzzMethod.prototype.toString = function(varName) {
+  result = ""
+  switch(this) {
+    case obj.DefuzzMethods.COG:
+      result += "sum = 0, weightedSum = 0, step = (max - min) / 1000; \
+      for(i = self.__outVarRanges." + varName + ".min; i <= self.__outVarRanges." + varName + ".max; i += step) { \
+        locVal = 0; \
+        self.__outVarTerms." + varName + ".forEach(function(t) { \
+          locVal = acc(locVal, self.__defuzzTermFunctions." + varName + "[t](i) * self.__outVarTermValues." + varName + "[t]) \
+        }); \
+        if(locVal > 0) { \
+          sum += locVal; \
+          weightedSum += locVal * i \
+        }; \
+      }; \
+      if(sum > 0) { \
+        val = weightedSum / sum \
+      } else { \
+        val = 0 \
+      };"
+      break
+
+    case obj.DefuzzMethods.COGS:
+      // @TODO
+      break
+
+    case obj.DefuzzMethods.COA:
+      // @TODO
+      break
+
+    case obj.DefuzzMethods.LM:
+      // @TODO
+      break
+
+    case obj.DefuzzMethods.RM:
+      // @TODO
+      break
   }
   return result
 }
@@ -173,42 +256,7 @@ obj.DefuzzifyBlock.prototype.toString = function() {
   }
   result += "};"
 
-  switch(this.defuzzMethod) {
-    case obj.DefuzzMethods.COG:
-      result += "sum = 0, weightedSum = 0, step = (max - min) / 1000; \
-      for(i = self.__outVarRanges." + this.var.name + ".min; i <= self.__outVarRanges." + this.var.name + ".max; i += step) { \
-        locVal = 0; \
-        self.__outVarTerms." + this.var.name + ".forEach(function(t) { \
-          locVal = acc(locVal, self.__defuzzTermFunctions." + this.var.name + "[t](i) * self.__outVarTermValues." + this.var.name + "[t]) \
-        }); \
-        if(locVal > 0) { \
-          sum += locVal; \
-          weightedSum += locVal * i \
-        }; \
-      }; \
-      if(sum > 0) { \
-        val = weightedSum / sum \
-      } else { \
-        val = 0 \
-      };"
-      break
-
-    case obj.DefuzzMethods.COGS:
-      // @TODO
-      break
-
-    case obj.DefuzzMethods.COA:
-      // @TODO
-      break
-
-    case obj.DefuzzMethods.LM:
-      // @TODO
-      break
-
-    case obj.DefuzzMethods.RM:
-      // @TODO
-      break
-  }
+  result += this.defuzzMethod.toString(this.var.name)
 
   if(self.range) {
     result += "if(val < " + self.range.min + ") { \
@@ -228,88 +276,61 @@ obj.DefuzzifyBlock.prototype.toString = function() {
 }
 
 obj.Gauss.prototype.toString = function() {
-  // @TODO
+  result = "calc = function (x) { \
+    m = " + varOrNum(this.stdev) + " * Math.sqrt(2 * Math.PI); \
+    e = Math.exp(-Math.pow(x - " + varOrNum(this.mean) + ", 2) / (2 * Math.pow(" + varOrNum(this.stdev) + ", 2))); \
+    return e / m; \
+  }; \
+  min = " + varOrNum(this.mean) + " - 4.0 * " + varOrNum(this.stdev) + "; \
+  max = " + varOrNum(this.mean) + " + 4.0 * " + varOrNum(this.stdev) + ";"
+  return result
 }
 
 obj.Gbell.prototype.toString = function() {
-  // @TODO
+  return "delta = Math.pow(999, 1 / (2 * " + varOrNum(this.mean) + ")) * " + varOrNum(this.b) + "; \
+  min = " + varOrNum(this.a) + " - delta; \
+  max = " + varOrNum(this.a) + " + delta; \
+  calc = function (x) { \
+    if(x < min || x > max) { return 0 }; \
+    t = Math.abs((x - " + varOrNum(this.mean) +") / " + varOrNum(this.a) + "); \
+    t = Math.pow(t, 2.0 * " + varOrNum(this.b) + "); \
+    return 1 / (1 + t) \
+  };"
 }
 
 obj.Func.prototype.toString = function() {
-  return "return " + t.func.func
+  return singleton(this.func)
 }
 
 obj.Piecewise.prototype.toString = function() {
-  result = "calc = function (x) {"
-  xs = "xs = ["
-  ys = "ys = ["
-  min = this.points[0].x
-  max = this.points[0].x
+  xs = []
+  ys = []
   this.points.forEach(function(point) {
-    min = Math.min(min, point.x)
-    max = Math.max(min, point.x)
-    xs += point.x + ","
-    ys += point.y + ","
+    xs.push(point.x)
+    ys.push(point.y)
   })
-  result += xs + "];" + ys + "];"
-  result += "min = " + min + ";"
-  result += "max = " + max + ";"
-  result += 
-    "if(x < min || x > max) { return 0 }; \
-    lo = 0, hi = xs.length - 1; \
-    while (hi - lo > 1) { \
-      mid = (lo + hi) >> 1; \
-      if (x < xs[mid]) hi = mid; \
-      else lo = mid; \
-    } \
-    return ys[lo] + (ys[hi] - ys[lo]) / (xs[hi] - xs[lo]) * (x- xs[lo]) \
-  };"
-  return result
+  return piecewise(xs, ys)
 }
 
 obj.Sigm.prototype.toString = function() {
-  // @TODO
+  return "min = " + varOrNum(this.center) + " - 9 / Math.abs(" + varOrNum(this.gain) + "); \
+    max = " + varOrNum(this.center) + " + 9 / Math.abs(" + varOrNum(this.gain) + "); \
+    calc = function (x) { \
+      if(x < min || x > max) { return 0; } \
+      return 1.0 / (1.0 + Math.exp(-" + varOrNum(this.gain) + " * (x - " + varOrNum(this.center) + "))); \
+    };"
 }
 
 obj.Singleton.prototype.toString = function() {
-  result = "calc = function (x) {"
-  result += "if(x == "
-  if(typeof this.func.value == 'number') {
-    result += this.func.value
-  } else {
-    result += this.func.value.toString()
-  }
-  result +=
-    ") { \
-    return 1 \
-  } else { \
-    return 0 \
-  } \
-  };"
-  return result
+  return singleton(varOrNum(this.value))
 }
 
 obj.Trian.prototype.toString = function() {
-  result = "calc = function (x) {"
-  result += "xs = [" + this.min + "," + this.mid + "," + this.high + "];"
-  result += "ys = [0, 1, 0];"
-  result += "min = " + this.min + ";"
-  result += "max = " + this.max + ";"
-  result += 
-    "if(x < min || x > max) { return 0 }; \
-    lo = 0, hi = xs.length - 1; \
-    while (hi - lo > 1) { \
-      mid = (lo + hi) >> 1; \
-      if (x < xs[mid]) hi = mid; \
-      else lo = mid; \
-    } \
-    return ys[lo] + (ys[hi] - ys[lo]) / (xs[hi] - xs[lo]) * (x - xs[lo]) \
-  };"
-  return result
+  return piecewise([this.min, this.mid, this.max], [0, 1, 0])
 }
 
 obj.Trape.prototype.toString = function() {
-  // @TODO
+  return piecewise([this.min, this.midLow, this.midHigh, this.max], [0, 1, 1, 0])
 }
 
 obj.Operator.prototype.toString = function() {
