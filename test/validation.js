@@ -5,10 +5,18 @@ var async = require('async')
 var path = require('path')
 var assert = require('assert')
 
-describe('Validation',function(next1) {
-  it('should load and lex files',function(next2) {
+filesToSkip = ['./test/validation/junit_cosine.fcl', './test/validation/junit_dsigm.fcl']
+
+describe('Validation',function() {
+  it('should load and lex files',function(done) {
     this.timeout(5000)
-    glob('./tests/validation/*.fcl',function(e,files) {
+    glob('./test/validation/*.fcl',function(e,files) {
+      files = files.filter(function(f) {
+        return filesToSkip.indexOf(f) == -1
+      })
+
+      var numFilesProcessed = 0
+
       assert(!e,"Exception caught while globbing: "+e)
       async.each(files,function(file,cb) {
         var basename = path.basename(file,'.fcl')
@@ -25,15 +33,19 @@ describe('Validation',function(next1) {
           var logic
           try {
             logic = require(path.join(__dirname,"tmp",basename+".js"))
+
+            numFilesProcessed++
+            if(numFilesProcessed == files.length - filesToSkip.length) {
+              done()
+            }
           } catch(e) {
             assert(!e,"File was not created: "+e)
           }
-          next()
         })
         
       },function(e) {
         assert(!e,"Exception caught while reading files"+e)
-        next2()
+        done()
       })
     })
   })
