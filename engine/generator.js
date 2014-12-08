@@ -296,16 +296,18 @@ obj.DefuzzifyBlock.prototype.toString = function() {
     result += "this.__outVarTerms." + self.var.name + ".push('" + t.name + "');"
     result += "this.__defuzzTermFunctions." + self.var.name + "." + t.name + " = function(x) {"
     result += t.func.toString()
-    result += "if(self.__outVarRanges." + self.var.name + ".min != null) { \
-      self.__outVarRanges." + self.var.name + ".min = Math.min(min, self.__outVarRanges." + self.var.name + ".min); \
-    } else { \
-       self.__outVarRanges." + self.var.name + ".min = min \
-    }; \
-    if(self.__outVarRanges." + self.var.name + ".max != null) { \
-      self.__outVarRanges." + self.var.name + ".max = Math.max(max, self.__outVarRanges." + self.var.name + ".max) \
-    } else { \
-       self.__outVarRanges." + self.var.name + ".max = max \
-    };"
+    if(!t.func instanceof obj.Singleton && !t.func instanceof obj.Func) {
+      result += "if(self.__outVarRanges." + self.var.name + ".min != null) { \
+        self.__outVarRanges." + self.var.name + ".min = Math.min(min, self.__outVarRanges." + self.var.name + ".min); \
+      } else { \
+         self.__outVarRanges." + self.var.name + ".min = min \
+      }; \
+      if(self.__outVarRanges." + self.var.name + ".max != null) { \
+        self.__outVarRanges." + self.var.name + ".max = Math.max(max, self.__outVarRanges." + self.var.name + ".max) \
+      } else { \
+         self.__outVarRanges." + self.var.name + ".max = max \
+      };"
+    }
     result += "return calc(x);"
     result += "};"
     // Exercise each function once to set the range
