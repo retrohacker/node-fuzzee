@@ -1,3 +1,5 @@
+# This project is no longer supported
+
 node-fuzzee
 ===========
 
