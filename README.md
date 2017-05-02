@@ -1,5 +1,7 @@
 # This project is no longer supported
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/retrohacker/node-fuzzee.svg)](https://greenkeeper.io/)
+
 node-fuzzee
 ===========
 
